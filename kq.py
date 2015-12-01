@@ -30,12 +30,13 @@ inner_tet_verts = [ mul(p,0.6) for p in tet_verts ]
 tet_centers = [ av( tet_verts[i], inner_tet_verts[i] ) for i in range(4) ]
 arm_centers = [ av( tet_centers[a], tet_centers[b] ) for a,b in tet_edges ]
 arm_edges = [ av( tet_verts[a], tet_verts[b] ) for a,b in tet_edges ]
-twist = 1.5
-stagger = 0.1
+twist = [ 1.5, 2.5+1, 3.5-0.5, 4.5+0.5, 5.5-1, 6.5, 7.5-1, 8.5+1 ]
+stagger = [ 0.1, -0.1, 0.2, -0.2, 0.1, -0.1, 0.3, -0.3 ]
+radius = [ 0.7, 1, 1, 1, 1, 0.7, 1, 1 ]
 arm_sides = [ add( add( add( arm_centers[i], \
-                             mul( cross( sub( arm_edges[i], arm_centers[i] ), sub( tet_verts[a], arm_centers[i] ) ), math.sin((j+twist)*2*math.pi/8) ) ), \
-                             mul( sub( arm_edges[i], arm_centers[i] ), math.cos((j+twist)*2*math.pi/8) ) ), \
-                             mul( sub( tet_verts[a], arm_centers[i] ), -stagger if j%2 else stagger ) ) \
+                             mul( cross( sub( arm_edges[i], arm_centers[i] ), sub( tet_verts[a], arm_centers[i] ) ), radius[j] * math.sin(twist[j]*2*math.pi/8) ) ), \
+                             mul( sub( arm_edges[i], arm_centers[i] ), radius[j] * math.cos(twist[j]*2*math.pi/8) ) ), \
+                             mul( sub( tet_verts[a], arm_centers[i] ), stagger[j] ) ) \
               for i,(a,b) in enumerate(tet_edges) for j in range(8) ]
 
 # then join the vertices together to make 12 outer heptagons and 12 inner ones
