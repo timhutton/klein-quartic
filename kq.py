@@ -16,7 +16,7 @@ def outputOBJ( verts, faces, filename ):
         for v in verts:
             out.write('v ' + ' '.join(str(e) for e in v) + '\n')
         for f in faces:
-            out.write('f ' + ' '.join(str(e+1) for e in f) + '\n')
+            out.write('f ' + ' '.join(str(e+1) for e in f[::-1]) + '\n')
 
 # first make a tetrahedron
 ir2 = 1 / math.sqrt(2)
@@ -30,8 +30,8 @@ inner_tet_verts = [ mul(p,0.6) for p in tet_verts ]
 tet_centers = [ av( tet_verts[i], inner_tet_verts[i] ) for i in range(4) ]
 arm_centers = [ av( tet_centers[a], tet_centers[b] ) for a,b in tet_edges ]
 arm_edges = [ av( tet_verts[a], tet_verts[b] ) for a,b in tet_edges ]
-twist = 0.5
-stagger = 0.3
+twist = 1.5
+stagger = 0.1
 arm_sides = [ add( add( add( arm_centers[i], \
                              mul( cross( sub( arm_edges[i], arm_centers[i] ), sub( tet_verts[a], arm_centers[i] ) ), math.sin((j+twist)*2*math.pi/8) ) ), \
                              mul( sub( arm_edges[i], arm_centers[i] ), math.cos((j+twist)*2*math.pi/8) ) ), \
@@ -40,13 +40,13 @@ arm_sides = [ add( add( add( arm_centers[i], \
 
 # then join the vertices together to make 12 outer heptagons and 12 inner ones
 outer_faces = [ (0,8,9,10,30,31,24),   (0,24,25,26,22,23,16), (0,16,17,18,14,15,8),
-                (1,15,14,13,38,39,32), (1,32,33,34,46,47,40), (1,40,41,42,9,8,15),
-                (2,23,22,21,54,55,48), (2,48,49,50,33,32,39), (2,39,38,37,17,16,23),
-                (3,31,30,29,41,40,47), (3,47,46,45,49,48,55), (3,55,54,53,25,24,31) ]
+                (1,13,12,11,38,39,32), (1,32,33,34,46,47,40), (1,40,41,42,15,14,13),
+                (2,21,20,19,54,55,48), (2,48,49,50,39,38,37), (2,37,36,35,23,22,21),
+                (3,29,28,27,47,46,45), (3,45,44,43,55,54,53), (3,53,52,51,31,30,29) ]
 inner_faces = [ (4,12,13,14,18,19,20), (4,20,21,22,26,27,28), (4,28,29,30,10,11,12),
-                (5,11,10,9,42,43,44),  (5,44,45,46,34,35,36), (5,36,37,38,13,12,11), 
-                (6,19,18,17,37,36,35), (6,35,34,33,50,51,52), (6,52,53,54,21,20,19),
-                (7,27,26,25,53,52,51), (7,51,50,49,45,44,43), (7,43,42,41,29,28,27) ]
+                (5,9,8,15,42,43,44),   (5,44,45,46,34,35,36), (5,36,37,38,11,10,9), 
+                (6,17,16,23,35,34,33), (6,33,32,39,50,51,52), (6,52,53,54,19,18,17),
+                (7,25,24,31,51,50,49), (7,49,48,55,43,42,41), (7,41,40,47,27,26,25) ]
                 
 def outer_as_tris( f ):
     '''Given an outer heptagon, return the desired triangles.'''
@@ -65,7 +65,7 @@ outer_faces_as_tris = flatten( outer_as_tris(f) for f in outer_faces )
 inner_faces_as_tris = flatten( inner_as_tris(f) for f in inner_faces )
                 
 # for better shape we move the tetrahedron vertices inwards
-corner_verts = [ mul(p,0.7) for p in tet_verts+inner_tet_verts ]
+corner_verts = [ mul(p,0.6) for p in tet_verts+inner_tet_verts ]
 
 outputOBJ( corner_verts + arm_sides, outer_faces + inner_faces, 'kq.obj' ) # this one is 'correct' but has bent faces which most packages seem to find hard
 outputOBJ( corner_verts + arm_sides, outer_faces_as_tris + inner_faces_as_tris, 'kq_surface.obj' ) # this one has the wrong topology but is triangulated
