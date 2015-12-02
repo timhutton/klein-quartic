@@ -56,7 +56,7 @@ def outer_as_tris( f ):
 
 def inner_as_tris( f ):
     '''Given an inner heptagon, return the desired triangles.'''
-    ind = [ (0,1,3), (1,2,3), (0,3,6), (6,3,4), (6,4,5) ]
+    ind = [ (0,1,3), (1,2,3), (0,3,4), (0,4,6), (6,4,5) ]
     return [ (f[t[0]],f[t[1]],f[t[2]]) for t in ind ]
     
 def flatten( lst ):
