@@ -1,22 +1,36 @@
 # Make a 3D model of the Klein Quartic
 
+''' Copyright 2015 Tim Hutton <tim.hutton@gmail.com>
+
+    This file is part of klein-quartic.
+
+    klein-quartic is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    klein-quartic is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with klein-quartic. If not, see <http://www.gnu.org/licenses/>.
+'''
+    
+try:
+    import vtk
+except ImportError:
+    print "\nThis script uses VTK, which you don't seem to have installed."
+    print "On Ubuntu: sudo apt-get install python-vtk"
+    print "On Windows: download python installer from http://vtk.org"
+    print "If installing VTK >= 6 you will need small changes, like SetInput() -> SetInputData()"
+    exit(1)
+    
 import itertools
 import math
-
-def add( a, b ): return list(x+y for x,y in zip(a,b))
-def sub( a, b ): return list(x-y for x,y in zip(a,b))
-def mul( p, f ): return list(e*f for e in p)
-def dot( a, b ): return sum(x*y for x,y in zip(a,b))
-def av( a, b ): return mul(add(a,b),0.5)
-def mag( a ): return math.sqrt(dot(a,a))
-def norm( a ): return mul(a,1/mag(a))
-def cross( a, b ): return ( a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0] )
-def outputOBJ( verts, faces, filename ):
-    with open( filename, 'w' ) as out:
-        for v in verts:
-            out.write('v ' + ' '.join(str(e) for e in v) + '\n')
-        for f in faces:
-            out.write('f ' + ' '.join(str(e+1) for e in f[::-1]) + '\n')
+from math_functions import *
+import random
 
 # first make a tetrahedron
 ir2 = 1 / math.sqrt(2)
@@ -59,9 +73,6 @@ def inner_as_tris( f ):
     ind = [ (0,1,3), (1,2,3), (0,3,4), (0,4,6), (6,4,5) ]
     return [ (f[t[0]],f[t[1]],f[t[2]]) for t in ind ]
     
-def flatten( lst ):
-    return [ item for sublist in lst for item in sublist ]
-
 outer_faces_as_tris = flatten( outer_as_tris(f) for f in outer_faces )
 inner_faces_as_tris = flatten( inner_as_tris(f) for f in inner_faces )
                 
@@ -75,33 +86,8 @@ print 'Outputted kq.obj and kq_surface.obj'
 # In Paraview, I opened kq.obj and applied these filters: Extract Edges, Tube. Then I opened kq_surface.obj and rendered it as a surface. This dual rendering
 # allows us to emphasise the real edges, not the internal ones.
 
-# --------- optional VTK visualisation below this point ------------
-
-try:
-    import vtk
-except ImportError:
-    print "\nFor rendering, this script uses VTK, which you don't seem to have installed."
-    print "On Ubuntu: sudo apt-get install python-vtk"
-    print "On Windows: download python installer from http://vtk.org"
-    print "If installing VTK >= 6 you will need small changes, like SetInput() -> SetInputData()"
-    exit(1)
+# ------ visualise with VTK --------
     
-import random
-    
-def makePolyData( verts, faces ):
-    pd = vtk.vtkPolyData()
-    pts = vtk.vtkPoints()
-    for pt in verts:
-        pts.InsertNextPoint( pt[0], pt[1], pt[2] )
-    cells = vtk.vtkCellArray()
-    for f in faces:
-        cells.InsertNextCell( len(f) )
-        for v in f:
-            cells.InsertCellPoint( v )
-    pd.SetPoints(pts)
-    pd.SetPolys(cells)
-    return pd
-
 surface = makePolyData( corner_verts + arm_sides, outer_faces_as_tris + inner_faces_as_tris )
 edges = makePolyData( corner_verts + arm_sides, outer_faces + inner_faces )
 
@@ -122,7 +108,6 @@ surfaceMapper = vtk.vtkPolyDataMapper()
 surfaceMapper.SetInput(surface)
 surfaceMapper.SetScalarRange(0,23)
 surfaceMapper.SetLookupTable(lut)
- 
 surfaceActor = vtk.vtkActor()
 surfaceActor.SetMapper(surfaceMapper)
 
@@ -149,6 +134,17 @@ tubeMapper.SetInputConnection(borders.GetOutputPort())
 tubeActor = vtk.vtkActor()
 tubeActor.SetMapper(tubeMapper)
 tubeActor.GetProperty().SetColor(0,0,0)
+
+plane = getHyperbolicPlaneTiling( 7, 3, 2 )
+# TODO: extract and correspond the 24 cells that match the Klein Quartic
+planeMapper = vtk.vtkPolyDataMapper()
+planeMapper.SetInput(plane)
+planeActor = vtk.vtkActor()
+planeActor.SetMapper(planeMapper)
+planeActor.SetScale(0.5)
+planeActor.SetPosition(0,0,-1)
+planeActor.GetProperty().EdgeVisibilityOn()
+planeActor.GetProperty().SetAmbient(1)
  
 ren = vtk.vtkRenderer()
 renWin = vtk.vtkRenderWindow()
@@ -160,6 +156,7 @@ iren.SetInteractorStyle(track)
  
 ren.AddActor(surfaceActor)
 ren.AddActor(tubeActor)
+#ren.AddActor(planeActor)
 
 ren.SetBackground(0.95, 0.9, 0.85)
 renWin.SetSize(600, 600)
