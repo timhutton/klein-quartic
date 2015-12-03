@@ -21,10 +21,10 @@
 try:
     import vtk
 except ImportError:
-    print "\nThis script uses VTK, which you don't seem to have installed."
-    print "On Ubuntu: sudo apt-get install python-vtk"
-    print "On Windows: download python installer from http://vtk.org"
-    print "If installing VTK >= 6 you will need small changes, like SetInput() -> SetInputData()"
+    print "\nThis script uses VTK, which you don't seem to have installed.\n"
+    print "On Ubuntu: sudo apt-get install python-vtk, and then run with 'python kq.py'\n"
+    print "On Windows: download python installer from http://vtk.org, install, add the bin folder to your PATH\n"
+    print "(eg. 'C:\Program Files\VTK-6.3.0\bin') and then run with 'vtkpython kq.py'"
     exit(1)
     
 import itertools
@@ -105,14 +105,21 @@ for i in range(24):
     lut.SetTableValue( i, ( rgb[0], rgb[1], rgb[2], 1 ) )
 
 surfaceMapper = vtk.vtkPolyDataMapper()
-surfaceMapper.SetInput(surface)
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    surfaceMapper.SetInputData(surface)
+else:
+    surfaceMapper.SetInput(surface)
 surfaceMapper.SetScalarRange(0,23)
 surfaceMapper.SetLookupTable(lut)
 surfaceActor = vtk.vtkActor()
 surfaceActor.SetMapper(surfaceMapper)
+surfaceActor.RotateX(125)
 
 lines = vtk.vtkExtractEdges()
-lines.SetInput(edges)
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    lines.SetInputData(edges)
+else:
+    lines.SetInput(edges)
 tube = vtk.vtkTubeFilter()
 tube.SetInputConnection(lines.GetOutputPort())
 tube.SetRadius(0.005)
@@ -123,7 +130,10 @@ sphere.SetRadius(0.005)
 sphere.SetPhiResolution(20)
 sphere.SetThetaResolution(20)
 vertices = vtk.vtkGlyph3D()
-vertices.SetInput(edges)
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    vertices.SetInputData(edges)
+else:
+    vertices.SetInput(edges)
 vertices.SetSourceConnection(sphere.GetOutputPort())
 
 borders = vtk.vtkAppendPolyData()
@@ -134,17 +144,23 @@ tubeMapper.SetInputConnection(borders.GetOutputPort())
 tubeActor = vtk.vtkActor()
 tubeActor.SetMapper(tubeMapper)
 tubeActor.GetProperty().SetColor(0,0,0)
+tubeActor.RotateX(125)
 
-plane = getHyperbolicPlaneTiling( 7, 3, 2 )
+plane = getHyperbolicPlaneTiling( 7, 3, 3 )
 # TODO: extract and correspond the 24 cells that match the Klein Quartic
 planeMapper = vtk.vtkPolyDataMapper()
-planeMapper.SetInput(plane)
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    planeMapper.SetInputData(plane)
+else:
+    planeMapper.SetInput(plane)
 planeActor = vtk.vtkActor()
 planeActor.SetMapper(planeMapper)
-planeActor.SetScale(0.5)
-planeActor.SetPosition(0,0,-1)
+planeActor.SetScale(0.4)
+planeActor.SetPosition(0,0,-0.75)
+planeActor.GetProperty().SetColor(0.7,0.7,0.7)
 planeActor.GetProperty().EdgeVisibilityOn()
 planeActor.GetProperty().SetAmbient(1)
+planeActor.GetProperty().SetDiffuse(0)
  
 ren = vtk.vtkRenderer()
 renWin = vtk.vtkRenderWindow()
@@ -156,10 +172,10 @@ iren.SetInteractorStyle(track)
  
 ren.AddActor(surfaceActor)
 ren.AddActor(tubeActor)
-#ren.AddActor(planeActor)
+ren.AddActor(planeActor)
 
 ren.SetBackground(0.95, 0.9, 0.85)
-renWin.SetSize(600, 600)
+renWin.SetSize(800, 600)
  
 iren.Initialize()
  
