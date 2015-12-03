@@ -33,8 +33,9 @@ from math_functions import *
 import random
 
 # first make a tetrahedron
-ir2 = 1 / math.sqrt(2)
-tet_verts = [ (-1, 0, -ir2), (1, 0, -ir2), (0, -1, ir2), (0, 1, ir2) ]
+r6 = math.sqrt(6)
+r3 = math.sqrt(3)
+tet_verts = [ (0,0,-r6/2), (-r3/3,1,r6/6), (2*r3/3,0,r6/6), (-r3/3,-1,r6/6) ]
 tet_edges = list( itertools.combinations(range(4),2) )
 
 # and a nested one
@@ -113,7 +114,6 @@ surfaceMapper.SetScalarRange(0,23)
 surfaceMapper.SetLookupTable(lut)
 surfaceActor = vtk.vtkActor()
 surfaceActor.SetMapper(surfaceMapper)
-surfaceActor.RotateX(125)
 
 lines = vtk.vtkExtractEdges()
 if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
@@ -144,7 +144,6 @@ tubeMapper.SetInputConnection(borders.GetOutputPort())
 tubeActor = vtk.vtkActor()
 tubeActor.SetMapper(tubeMapper)
 tubeActor.GetProperty().SetColor(0,0,0)
-tubeActor.RotateX(125)
 
 plane = getHyperbolicPlaneTiling( 7, 3, 3 )
 # TODO: extract and correspond the 24 cells that match the Klein Quartic
@@ -155,7 +154,7 @@ else:
     planeMapper.SetInput(plane)
 planeActor = vtk.vtkActor()
 planeActor.SetMapper(planeMapper)
-planeActor.SetScale(0.4)
+planeActor.SetScale(0.3)
 planeActor.SetPosition(0,0,-0.75)
 planeActor.GetProperty().SetColor(0.7,0.7,0.7)
 planeActor.GetProperty().EdgeVisibilityOn()
