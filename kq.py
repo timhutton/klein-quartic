@@ -70,6 +70,76 @@ corner_verts = [ mul(p,0.6) for p in tet_verts+inner_tet_verts ]
 
 outputOBJ( corner_verts + arm_sides, outer_faces + inner_faces, 'kq.obj' ) # this one is 'correct' but has bent faces which most packages seem to find hard
 outputOBJ( corner_verts + arm_sides, outer_faces_as_tris + inner_faces_as_tris, 'kq_surface.obj' ) # this one has the wrong topology but is triangulated
+print 'Outputted kq.obj and kq_surface.obj'
 
 # In Paraview, I opened kq.obj and applied these filters: Extract Edges, Tube. Then I opened kq_surface.obj and rendered it as a surface. This dual rendering
 # allows us to emphasise the real edges, not the internal ones.
+
+# --------- optional VTK visualisation below this point ------------
+
+try:
+    import vtk
+except ImportError:
+    print "\nFor rendering, this script uses VTK, which you don't seem to have installed."
+    print "On Ubuntu: sudo apt-get install python-vtk"
+    print "On Windows: download python installer from http://vtk.org"
+    print "If installing VTK >= 6 you will need small changes, like SetInput() -> SetInputData()"
+    exit(1)
+    
+def makePolyData( verts, faces ):
+    pd = vtk.vtkPolyData()
+    pts = vtk.vtkPoints()
+    pts.SetNumberOfPoints( len(verts) )
+    for i,pt in enumerate(verts):
+        pts.SetPoint( i, pt[0], pt[1], pt[2] )
+    cells = vtk.vtkCellArray()
+    for f in faces:
+        cells.InsertNextCell( len(f) )
+        for v in f:
+            cells.InsertCellPoint( v )
+    pd.SetPoints(pts)
+    pd.SetPolys(cells)
+    return pd
+
+surface = makePolyData( corner_verts + arm_sides, outer_faces_as_tris + inner_faces_as_tris )
+edges = makePolyData( corner_verts + arm_sides, outer_faces + inner_faces )
+
+surfaceMapper = vtk.vtkPolyDataMapper()
+surfaceMapper.SetInput(surface)
+ 
+surfaceActor = vtk.vtkActor()
+surfaceActor.SetMapper(surfaceMapper)
+
+lines = vtk.vtkExtractEdges()
+lines.SetInput(edges)
+tube = vtk.vtkTubeFilter()
+tube.SetInputConnection(lines.GetOutputPort())
+tube.SetRadius(0.01)
+tube.SetNumberOfSides(20)
+tubeMapper = vtk.vtkPolyDataMapper()
+tubeMapper.SetInputConnection(tube.GetOutputPort())
+tubeActor = vtk.vtkActor()
+tubeActor.SetMapper(tubeMapper)
+tubeActor.GetProperty().SetColor(0,0,0.7)
+ 
+ren = vtk.vtkRenderer()
+renWin = vtk.vtkRenderWindow()
+renWin.AddRenderer(ren)
+iren = vtk.vtkRenderWindowInteractor()
+iren.SetRenderWindow(renWin)
+track = vtk.vtkInteractorStyleTrackballCamera()
+iren.SetInteractorStyle(track)
+ 
+ren.AddActor(surfaceActor)
+ren.AddActor(tubeActor)
+
+ren.SetBackground(0.95, 0.9, 0.85)
+renWin.SetSize(600, 600)
+ 
+iren.Initialize()
+ 
+ren.ResetCamera()
+ren.GetActiveCamera().Zoom(1.5)
+renWin.Render()
+ 
+iren.Start()
