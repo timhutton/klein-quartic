@@ -86,12 +86,13 @@ except ImportError:
     print "If installing VTK >= 6 you will need small changes, like SetInput() -> SetInputData()"
     exit(1)
     
+import random
+    
 def makePolyData( verts, faces ):
     pd = vtk.vtkPolyData()
     pts = vtk.vtkPoints()
-    pts.SetNumberOfPoints( len(verts) )
-    for i,pt in enumerate(verts):
-        pts.SetPoint( i, pt[0], pt[1], pt[2] )
+    for pt in verts:
+        pts.InsertNextPoint( pt[0], pt[1], pt[2] )
     cells = vtk.vtkCellArray()
     for f in faces:
         cells.InsertNextCell( len(f) )
@@ -104,8 +105,23 @@ def makePolyData( verts, faces ):
 surface = makePolyData( corner_verts + arm_sides, outer_faces_as_tris + inner_faces_as_tris )
 edges = makePolyData( corner_verts + arm_sides, outer_faces + inner_faces )
 
+cellIds = flatten( [i]*5 for i in range(24) ) # each of the 24 heptagons is made of 5 triangles
+surfaceCellData = vtk.vtkFloatArray()
+for val in cellIds:
+    surfaceCellData.InsertNextValue( val )
+surface.GetCellData().SetScalars( surfaceCellData )
+
+lut = vtk.vtkLookupTable()
+lut.SetNumberOfTableValues(24)
+lut.Build()
+for i in range(24):
+    rgb = vtk.vtkMath.HSVToRGB( random.random(), 1, 1 )
+    lut.SetTableValue( i, ( rgb[0], rgb[1], rgb[2], 1 ) )
+
 surfaceMapper = vtk.vtkPolyDataMapper()
 surfaceMapper.SetInput(surface)
+surfaceMapper.SetScalarRange(0,23)
+surfaceMapper.SetLookupTable(lut)
  
 surfaceActor = vtk.vtkActor()
 surfaceActor.SetMapper(surfaceMapper)
@@ -114,13 +130,13 @@ lines = vtk.vtkExtractEdges()
 lines.SetInput(edges)
 tube = vtk.vtkTubeFilter()
 tube.SetInputConnection(lines.GetOutputPort())
-tube.SetRadius(0.01)
+tube.SetRadius(0.005)
 tube.SetNumberOfSides(20)
 tubeMapper = vtk.vtkPolyDataMapper()
 tubeMapper.SetInputConnection(tube.GetOutputPort())
 tubeActor = vtk.vtkActor()
 tubeActor.SetMapper(tubeMapper)
-tubeActor.GetProperty().SetColor(0,0,0.7)
+tubeActor.GetProperty().SetColor(0,0,0)
  
 ren = vtk.vtkRenderer()
 renWin = vtk.vtkRenderWindow()
