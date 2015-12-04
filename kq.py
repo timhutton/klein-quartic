@@ -102,26 +102,29 @@ renWin.SetSize(800, 600)
 surface = makePolyData( corner_verts + arm_sides, outer_faces_as_tris + inner_faces_as_tris )
 edges = makePolyData( corner_verts + arm_sides, outer_faces + inner_faces )
 
-cell_ordering = [ 1, 2, 0, -3, -4, 10, -6, -7, 9, -9, -10, 6, 14, -13, 12, 3, 13, 8, 5, 16, 7, 4, 15, 11 ]
-cellIds = flatten( [i]*5 for i in cell_ordering ) # each of the 24 heptagons is made of 5 triangles
+kq_ids    = [ 1, 2, 0, 23, 20, 8, 22, 19, 7, 21, 18, 6, 12, 14, 13, 3, 17, 11, 5, 16, 10, 4, 15, 9 ]
+plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14, 16, 100, 20, 103, 21, 19, 104, 105, 106, 107, 108, 22, 18, 23 ]
+
+cellIds = flatten( [i]*5 for i in kq_ids ) # each of the 24 heptagons is made of 5 triangles
 surfaceCellData = vtk.vtkFloatArray()
 for val in cellIds:
     surfaceCellData.InsertNextValue( val )
 surface.GetCellData().SetScalars( surfaceCellData )
 
 lut = vtk.vtkLookupTable()
-lut.SetNumberOfTableValues(24)
+lut.SetNumberOfTableValues(25)
 lut.Build()
 for i in range(24):
-    rgb = vtk.vtkMath.HSVToRGB( random.random(), random.random(), 1 )
+    rgb = vtk.vtkMath.HSVToRGB( random.random(), random.uniform(0.5,1), random.uniform(0.7,1) )
     lut.SetTableValue( i, ( rgb[0], rgb[1], rgb[2], 1 ) )
+lut.SetTableValue( 24, 1, 1, 1 )
 
 surfaceMapper = vtk.vtkPolyDataMapper()
 if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
     surfaceMapper.SetInputData(surface)
 else:
     surfaceMapper.SetInput(surface)
-surfaceMapper.SetScalarRange(0,23)
+surfaceMapper.SetScalarRange(0,24)
 surfaceMapper.SetLookupTable(lut)
 surfaceActor = vtk.vtkActor()
 surfaceActor.SetMapper(surfaceMapper)
@@ -158,61 +161,64 @@ tubeActor.SetMapper(tubeMapper)
 tubeActor.GetProperty().SetColor(0,0,0)
 ren.AddActor(tubeActor)
 
-plane = getDual( getHyperbolicPlaneTiling( 3, 7, 7 ) ) # (we do it this way to get a vertex at the center instead of a cell)
-# extract the 24 cells that match the Klein Quartic
-cut_sphere = vtk.vtkSphere()
-cut_sphere.SetRadius(1.72)
-cut = vtk.vtkExtractPolyDataGeometry()
-cut.SetImplicitFunction(cut_sphere)
-cut.ExtractInsideOn()
-if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    cut.SetInputData(plane)
-else:
-    cut.SetInput(plane)
+plane = getDual( getHyperbolicPlaneTiling( 3, 7, 9  ) ) # (we do it this way to get a vertex at the center instead of a cell)
 plane_trans = vtk.vtkTransform()
 plane_trans.Translate(0,0,-0.75)
 plane_trans.Scale(0.7,0.7,0.7)
 trans = vtk.vtkTransformPolyDataFilter()
 trans.SetTransform(plane_trans)
-trans.SetInputConnection(cut.GetOutputPort())
-add_ids = vtk.vtkIdFilter()
-add_ids.SetInputConnection(trans.GetOutputPort())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    trans.SetInputData(plane)
+else:
+    trans.SetInput(plane)
+trans.Update()
+plane_scalars = vtk.vtkIntArray()
+plane_scalars.SetNumberOfValues( trans.GetOutput().GetNumberOfPolys() )
+for i in range( trans.GetOutput().GetNumberOfPolys() ):
+    plane_scalars.SetValue( i, plane_ids[ i ] if i in range( len( plane_ids ) ) else 99 )
+trans.GetOutput().GetCellData().SetScalars( plane_scalars )
 
 planeMapper = vtk.vtkPolyDataMapper()
-planeMapper.SetInputConnection(add_ids.GetOutputPort())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    planeMapper.SetInputData( trans.GetOutput() )
+else:
+    planeMapper.SetInput( trans.GetOutput() )
 planeMapper.SetLookupTable(lut)
 planeMapper.SetScalarModeToUseCellData()
-planeMapper.SetScalarRange(0,23)
+planeMapper.SetScalarRange(0,24)
 planeActor = vtk.vtkActor()
 planeActor.SetMapper(planeMapper)
-planeActor.GetProperty().SetColor(0.7,0.7,0.7)
 planeActor.GetProperty().EdgeVisibilityOn()
 planeActor.GetProperty().SetAmbient(1)
 planeActor.GetProperty().SetDiffuse(0)
 ren.AddActor(planeActor)
 
 cell_centers = vtk.vtkCellCenters()
-cell_centers.SetInputConnection(trans.GetOutputPort())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    cell_centers.SetInputData( trans.GetOutput() )
+else:
+    cell_centers.SetInput( trans.GetOutput() )
 plane_labels = vtk.vtkLabeledDataMapper()
+plane_labels.SetLabelModeToLabelScalars()
 plane_labels.SetInputConnection(cell_centers.GetOutputPort())
 plane_labels_actor = vtk.vtkActor2D()
 plane_labels_actor.SetMapper(plane_labels)
-ren.AddActor(plane_labels_actor)
+#ren.AddActor(plane_labels_actor)
 
 kq_cell_centers = vtk.vtkCellCenters()
 if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
     kq_cell_centers.SetInputData(surface)
 else:
     kq_cell_centers.SetInput(surface)
-kq_plane_labels = vtk.vtkLabeledDataMapper()
-kq_plane_labels.SetInputConnection(kq_cell_centers.GetOutputPort())
-kq_plane_labels.SetLabelModeToLabelScalars()
-kq_plane_labels.SetLabelFormat("%.0f")
-kq_plane_labels.GetLabelTextProperty().SetJustificationToCentered()
-kq_plane_labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
-kq_plane_labels_actor = vtk.vtkActor2D()
-kq_plane_labels_actor.SetMapper(kq_plane_labels)
-ren.AddActor(kq_plane_labels_actor)
+kq_labels = vtk.vtkLabeledDataMapper()
+kq_labels.SetInputConnection(kq_cell_centers.GetOutputPort())
+kq_labels.SetLabelModeToLabelScalars()
+kq_labels.SetLabelFormat("%.0f")
+kq_labels.GetLabelTextProperty().SetJustificationToCentered()
+kq_labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
+kq_labels_actor = vtk.vtkActor2D()
+kq_labels_actor.SetMapper(kq_labels)
+#ren.AddActor(kq_labels_actor)
 
 iren.Initialize()
  
