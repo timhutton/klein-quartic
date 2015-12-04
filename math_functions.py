@@ -134,7 +134,10 @@ def getHyperbolicPlaneTiling( schlafli1, schlafli2, num_levels):
                 cells.InsertCellPoint( v )
             pd.SetPoints( points )
             pd.SetPolys( cells )
-            append.AddInput( pd )
+            if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+                append.AddInputData( pd )
+            else:
+                append.AddInput( pd )
             point_locator.InsertNextPoint( centroid )
 
     # merge duplicate points
@@ -143,3 +146,57 @@ def getHyperbolicPlaneTiling( schlafli1, schlafli2, num_levels):
     cleaner.SetTolerance(0.0001)
     cleaner.Update()
     return cleaner.GetOutput()
+    
+    
+def getNumberOfPointsSharedByTwoCells( pd, iCell1, iCell2 ):
+    '''Compute the number of shared points between iCell1 and iCell2 in the vtkPolyData pd.'''
+    cell1_points = vtk.vtkIdList()
+    pd.GetCellPoints( iCell1, cell1_points )
+    cell2_points = vtk.vtkIdList()
+    pd.GetCellPoints( iCell2, cell2_points )
+    cell1_points.IntersectWith( cell2_points )
+    return cell1_points.GetNumberOfIds()
+
+def getDual( pd ):
+    '''Get the dual of a vtkPolyData. The finite parts only.'''
+    pd.BuildLinks()
+    cells = vtk.vtkCellArray()
+    points = vtk.vtkPoints()
+    for iPt in range(pd.GetNumberOfPoints()):
+        neighbor_cellIds = vtk.vtkIdList()
+        pd.GetPointCells( iPt, neighbor_cellIds )
+        if neighbor_cellIds.GetNumberOfIds() < 3:
+            continue
+        # sort the neighbor_cellIds into a ring around iPt
+        sorted_neighbor_cellIds = [ neighbor_cellIds.GetId( 0 ) ]
+        for it in range( neighbor_cellIds.GetNumberOfIds() - 1 ):
+            for iicell in range( 1, neighbor_cellIds.GetNumberOfIds() ):
+                icell = neighbor_cellIds.GetId( iicell )
+                if icell in sorted_neighbor_cellIds:
+                    continue
+                # does this cell share exactly two vertices with the last one in the list?
+                if getNumberOfPointsSharedByTwoCells( pd, sorted_neighbor_cellIds[-1], icell ) == 2:
+                    sorted_neighbor_cellIds += [ icell ]
+                    break
+        if len( sorted_neighbor_cellIds ) < neighbor_cellIds.GetNumberOfIds():
+            continue # was a boundary vertex or non-manifold
+        if not getNumberOfPointsSharedByTwoCells( pd, sorted_neighbor_cellIds[-1], sorted_neighbor_cellIds[0] ) == 2:
+            continue # boundary vertex, in the case where cell id 0 was on the boundary
+        # make a face around this vertex: a new point at each centroid of the neighboring cells
+        cells.InsertNextCell( neighbor_cellIds.GetNumberOfIds() )
+        for id in sorted_neighbor_cellIds:
+            # find centroid of this cell
+            neighbor_verts = vtk.vtkIdList()
+            pd.GetCellPoints( id, neighbor_verts )
+            c = (0,0,0)
+            for iiv in range(neighbor_verts.GetNumberOfIds()):
+                iv = neighbor_verts.GetId(iiv)
+                p = pd.GetPoint( iv )
+                c = add( c, p )
+            c = mul( c, 1.0 / neighbor_verts.GetNumberOfIds() )
+            # insert the centroid as a point and as an index into the new face
+            cells.InsertCellPoint( points.InsertNextPoint( c ) )
+    dual_pd = vtk.vtkPolyData()
+    dual_pd.SetPoints( points )
+    dual_pd.SetPolys( cells )
+    return dual_pd

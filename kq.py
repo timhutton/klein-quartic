@@ -89,6 +89,16 @@ print 'Outputted kq.obj and kq_surface.obj'
 
 # ------ visualise with VTK --------
     
+ren = vtk.vtkRenderer()
+renWin = vtk.vtkRenderWindow()
+renWin.AddRenderer(ren)
+iren = vtk.vtkRenderWindowInteractor()
+iren.SetRenderWindow(renWin)
+track = vtk.vtkInteractorStyleTrackballCamera()
+iren.SetInteractorStyle(track)
+ren.SetBackground(0.95, 0.9, 0.85)
+renWin.SetSize(800, 600)
+  
 surface = makePolyData( corner_verts + arm_sides, outer_faces_as_tris + inner_faces_as_tris )
 edges = makePolyData( corner_verts + arm_sides, outer_faces + inner_faces )
 
@@ -114,6 +124,7 @@ surfaceMapper.SetScalarRange(0,23)
 surfaceMapper.SetLookupTable(lut)
 surfaceActor = vtk.vtkActor()
 surfaceActor.SetMapper(surfaceMapper)
+ren.AddActor(surfaceActor)
 
 lines = vtk.vtkExtractEdges()
 if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
@@ -144,38 +155,32 @@ tubeMapper.SetInputConnection(borders.GetOutputPort())
 tubeActor = vtk.vtkActor()
 tubeActor.SetMapper(tubeMapper)
 tubeActor.GetProperty().SetColor(0,0,0)
+ren.AddActor(tubeActor)
 
-plane = getHyperbolicPlaneTiling( 7, 3, 3 )
-# TODO: extract and correspond the 24 cells that match the Klein Quartic
-planeMapper = vtk.vtkPolyDataMapper()
+plane = getDual( getHyperbolicPlaneTiling( 3, 7, 7 ) ) # (we do it this way to get a vertex at the center instead of a cell)
+# extract the 24 cells that match the Klein Quartic
+sphere = vtk.vtkSphere()
+sphere.SetRadius(1.87)
+sphere.SetCenter(0,0,-0.75)
+cut = vtk.vtkExtractPolyDataGeometry()
+cut.SetImplicitFunction(sphere)
+cut.ExtractInsideOn()
 if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    planeMapper.SetInputData(plane)
+    cut.SetInputData(plane)
 else:
-    planeMapper.SetInput(plane)
+    cut.SetInput(plane)
+planeMapper = vtk.vtkPolyDataMapper()
+planeMapper.SetInputConnection(cut.GetOutputPort())
 planeActor = vtk.vtkActor()
 planeActor.SetMapper(planeMapper)
-planeActor.SetScale(0.3)
+planeActor.SetScale(0.7)
 planeActor.SetPosition(0,0,-0.75)
 planeActor.GetProperty().SetColor(0.7,0.7,0.7)
 planeActor.GetProperty().EdgeVisibilityOn()
 planeActor.GetProperty().SetAmbient(1)
 planeActor.GetProperty().SetDiffuse(0)
- 
-ren = vtk.vtkRenderer()
-renWin = vtk.vtkRenderWindow()
-renWin.AddRenderer(ren)
-iren = vtk.vtkRenderWindowInteractor()
-iren.SetRenderWindow(renWin)
-track = vtk.vtkInteractorStyleTrackballCamera()
-iren.SetInteractorStyle(track)
- 
-ren.AddActor(surfaceActor)
-ren.AddActor(tubeActor)
 ren.AddActor(planeActor)
 
-ren.SetBackground(0.95, 0.9, 0.85)
-renWin.SetSize(800, 600)
- 
 iren.Initialize()
  
 ren.ResetCamera()
