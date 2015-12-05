@@ -104,6 +104,10 @@ edges = makePolyData( corner_verts + arm_sides, outer_faces + inner_faces )
 
 kq_ids    = [ 1, 2, 0, 23, 20, 8, 22, 19, 7, 21, 18, 6, 12, 14, 13, 3, 17, 11, 5, 16, 10, 4, 15, 9 ]
 plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14, 16, 100, 20, 103, 21, 19, 104, 105, 106, 107, 108, 22, 18, 23 ]
+outer_or_inner_type = [ 0,0,0,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0 ]
+tetrahedron_corner_type = [ 0,0,0,2,1,3,1,3,2,1,3,2,0,0,0,1,3,2,1,3,2,1,3,2 ]
+three_colors_type = [ 1,0,2,0,2,1,0,2,1,2,1,0,1,0,2,0,2,1,0,2,1,2,1,0 ]
+affinity_groups_type = [ 2,0,1,2,0,1,0,1,2,2,0,1,2,0,1,2,0,1,0,1,2,0,1,2 ]
 
 cellIds = flatten( [i]*5 for i in kq_ids ) # each of the 24 heptagons is made of 5 triangles
 surfaceCellData = vtk.vtkFloatArray()
@@ -111,12 +115,18 @@ for val in cellIds:
     surfaceCellData.InsertNextValue( val )
 surface.GetCellData().SetScalars( surfaceCellData )
 
+type_colors = [ (1,0.4,0.4,1), (0.4,0.4,1,1), (0.4,1,0.4,1), (1,1,0.4,1) ]
 lut = vtk.vtkLookupTable()
 lut.SetNumberOfTableValues(25)
 lut.Build()
 for i in range(24):
-    rgb = vtk.vtkMath.HSVToRGB( random.random(), random.uniform(0.5,1), random.uniform(0.7,1) )
-    lut.SetTableValue( i, ( rgb[0], rgb[1], rgb[2], 1 ) )
+    random_color = vtk.vtkMath.HSVToRGB( random.random(), random.uniform(0.5,1), random.uniform(0.7,1) ) + (1,)
+    # You can choose the coloring you want here:
+    lut.SetTableValue( i, random_color )
+    #lut.SetTableValue( i, type_colors[ outer_or_inner_type[ i ] ] )
+    #lut.SetTableValue( i, type_colors[ tetrahedron_corner_type[ i ] ] )
+    #lut.SetTableValue( i, type_colors[ three_colors_type[ i ] ] )
+    #lut.SetTableValue( i, type_colors[ affinity_groups_type[ i ] ] )
 lut.SetTableValue( 24, 1, 1, 1 )
 
 surfaceMapper = vtk.vtkPolyDataMapper()
@@ -161,7 +171,7 @@ tubeActor.SetMapper(tubeMapper)
 tubeActor.GetProperty().SetColor(0,0,0)
 ren.AddActor(tubeActor)
 
-plane = getDual( getHyperbolicPlaneTiling( 3, 7, 9  ) ) # (we do it this way to get a vertex at the center instead of a cell)
+plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 plane_trans = vtk.vtkTransform()
 plane_trans.Translate(0,0,-0.75)
 plane_trans.Scale(0.7,0.7,0.7)
