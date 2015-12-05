@@ -64,24 +64,18 @@ inner_faces = [ (4,12,13,14,18,19,20), (4,20,21,22,26,27,28), (4,28,29,30,10,11,
                 (6,17,16,23,35,34,33), (6,33,32,39,50,51,52), (6,52,53,54,19,18,17),
                 (7,25,24,31,51,50,49), (7,49,48,55,43,42,41), (7,41,40,47,27,26,25) ]
                 
-def outer_as_tris( f ):
-    '''Given an outer heptagon, return the desired triangles.'''
+def heptagon_as_tris( f ):
+    '''Given a heptagon, return the desired triangles.'''
     ind = [ (0,1,3), (1,2,3), (0,3,4), (0,4,6), (4,5,6) ]
     return [ (f[t[0]],f[t[1]],f[t[2]]) for t in ind ]
 
-def inner_as_tris( f ):
-    '''Given an inner heptagon, return the desired triangles.'''
-    ind = [ (0,1,3), (1,2,3), (0,3,4), (0,4,6), (6,4,5) ]
-    return [ (f[t[0]],f[t[1]],f[t[2]]) for t in ind ]
-    
-outer_faces_as_tris = flatten( outer_as_tris(f) for f in outer_faces )
-inner_faces_as_tris = flatten( inner_as_tris(f) for f in inner_faces )
+faces_as_tris = flatten( heptagon_as_tris(f) for f in outer_faces+inner_faces )
                 
 # for better shape we move the tetrahedron vertices inwards
 corner_verts = [ mul(p,0.6) for p in tet_verts+inner_tet_verts ]
 
 outputOBJ( corner_verts + arm_sides, outer_faces + inner_faces, 'kq.obj' ) # this one is 'correct' but has bent faces which most packages seem to find hard
-outputOBJ( corner_verts + arm_sides, outer_faces_as_tris + inner_faces_as_tris, 'kq_surface.obj' ) # this one has the wrong topology but is triangulated
+outputOBJ( corner_verts + arm_sides, faces_as_tris, 'kq_surface.obj' ) # this one has the wrong topology but is triangulated
 print 'Outputted kq.obj and kq_surface.obj'
 
 # In Paraview, I opened kq.obj and applied these filters: Extract Edges, Tube. Then I opened kq_surface.obj and rendered it as a surface. This dual rendering
@@ -99,7 +93,7 @@ iren.SetInteractorStyle(track)
 ren.SetBackground(0.95, 0.9, 0.85)
 renWin.SetSize(800, 600)
   
-surface = makePolyData( corner_verts + arm_sides, outer_faces_as_tris + inner_faces_as_tris )
+surface = makePolyData( corner_verts + arm_sides, faces_as_tris )
 edges = makePolyData( corner_verts + arm_sides, outer_faces + inner_faces )
 
 kq_ids    = [ 1, 2, 0, 23, 20, 8, 22, 19, 7, 21, 18, 6, 12, 14, 13, 3, 17, 11, 5, 16, 10, 4, 15, 9 ]
