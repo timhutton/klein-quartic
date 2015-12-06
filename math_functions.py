@@ -28,6 +28,16 @@ def mag2( a ): return dot(a,a)
 def mag( a ): return math.sqrt(mag2(a))
 def norm( a ): return mul(a,1/mag(a))
 def cross( a, b ): return ( a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0] )
+def rotateXY90acw( v ): return ( -v[1], v[0], 0 )
+
+def intersectionOfTwoCircles( p1, r1, p2, r2 ):
+    '''Return one of the two intersections of these circles in the X,Y plane.'''
+    r = mag( sub( p2, p1 ) )
+    n = norm( sub( p2, p1 ) )
+    m = rotateXY90acw( n )
+    e = ( r*r + r1*r1 - r2*r2 ) / ( 2 * r )
+    h = math.sqrt( r1*r1 - e*e )
+    return add( add( p1, mul( n, e ) ), mul( m, h ) )
 
 def outputOBJ( verts, faces, filename ):
     with open( filename, 'w' ) as out:

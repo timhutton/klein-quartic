@@ -66,20 +66,51 @@ inner_faces = [ (4,12,13,14,18,19,20), (4,20,21,22,26,27,28), (4,28,29,30,10,11,
                 
 def heptagon_as_tris( f ):
     '''Given a heptagon, return the desired triangles.'''
-    ind = [ (0,1,3), (1,2,3), (0,3,4), (0,4,6), (4,5,6) ]
+    ind = [ (2,3,1), (1,3,0), (0,3,4), (0,4,6), (6,4,5) ]
     return [ (f[t[0]],f[t[1]],f[t[2]]) for t in ind ]
-
-faces_as_tris = flatten( heptagon_as_tris(f) for f in outer_faces+inner_faces )
-                
+    
 # for better shape we move the tetrahedron vertices inwards
 corner_verts = [ mul(p,0.6) for p in tet_verts+inner_tet_verts ]
+all_verts = corner_verts + arm_sides 
 
-outputOBJ( corner_verts + arm_sides, outer_faces + inner_faces, 'kq.obj' ) # this one is 'correct' but has bent faces which most packages seem to find hard
-outputOBJ( corner_verts + arm_sides, faces_as_tris, 'kq_surface.obj' ) # this one has the wrong topology but is triangulated
-print 'Outputted kq.obj and kq_surface.obj'
+outputOBJ( all_verts, outer_faces + inner_faces, 'kq.obj' ) # this one is 'correct' but has bent faces which most packages seem to find hard
 
-# In Paraview, I opened kq.obj and applied these filters: Extract Edges, Tube. Then I opened kq_surface.obj and rendered it as a surface. This dual rendering
-# allows us to emphasise the real edges, not the internal ones.
+faces_as_tris = flatten( heptagon_as_tris(f) for f in outer_faces + inner_faces )
+outputOBJ( all_verts, faces_as_tris, 'kq_surface.obj' ) # this one has the wrong topology but is triangulated
+
+def makeFlatHeptagon( verts, face ): 
+    ''' Given a (bent) heptagon that can be triangulated as below, output a z=0 flat version.
+        2---3---4---5
+         \ / \ / \ /
+          1---0---6             '''
+    new_verts = [()]*7
+    orderings = [ (2,1,3), (3,1,0), (3,0,4), (4,0,6), (4,6,5) ]
+    # start off with an edge on the x-axis
+    ia = face[2]
+    ib = face[1]
+    ab = mag( sub( verts[ ib ], verts[ ia ] ) )
+    new_verts[ 2 ] = (0,0,0)
+    new_verts[ 1 ] = (ab,0,0)
+    for iord,ord in enumerate( orderings ):
+        ia = face[ ord[0] ] 
+        ib = face[ ord[1] ]
+        ic = face[ ord[2] ]
+        a = verts[ ia ]
+        b = verts[ ib ]
+        c = verts[ ic ]
+        ac = mag( sub( a, c ) )
+        bc = mag( sub( b, c ) )
+        new_verts[ ord[2] ] = intersectionOfTwoCircles( new_verts[ ord[0] ], ac, new_verts[ ord[1] ], bc )
+    return new_verts,orderings
+
+# Compute flat versions of the two heptagons, for making the shape out of card.
+flat_outer_verts,flat_outer_faces = makeFlatHeptagon( all_verts, outer_faces[0] )
+outputOBJ( flat_outer_verts, flat_outer_faces, 'flat_outer.obj' )
+flat_inner_verts,flat_inner_faces = makeFlatHeptagon( all_verts, inner_faces[0] )
+outputOBJ( flat_inner_verts, flat_inner_faces, 'flat_inner.obj' )
+# For printing: load both into ParaView, and view in 2D mode, to get at same scale without distortion.
+
+print 'Outputted .obj files.'
 
 # ------ visualise with VTK --------
     
