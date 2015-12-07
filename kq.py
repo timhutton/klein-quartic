@@ -228,32 +228,40 @@ planeActor.GetProperty().SetAmbient(1)
 planeActor.GetProperty().SetDiffuse(0)
 ren.AddActor(planeActor)
 
-cell_centers = vtk.vtkCellCenters()
-if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    cell_centers.SetInputData( trans.GetOutput() )
-else:
-    cell_centers.SetInput( trans.GetOutput() )
-plane_labels = vtk.vtkLabeledDataMapper()
-plane_labels.SetLabelModeToLabelScalars()
-plane_labels.SetInputConnection(cell_centers.GetOutputPort())
-plane_labels_actor = vtk.vtkActor2D()
-plane_labels_actor.SetMapper(plane_labels)
-#ren.AddActor(plane_labels_actor)
+label_faces = True
+if label_faces:
+    cell_centers = vtk.vtkCellCenters()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        cell_centers.SetInputData( trans.GetOutput() )
+    else:
+        cell_centers.SetInput( trans.GetOutput() )
+    plane_labels_visible_only = vtk.vtkSelectVisiblePoints()
+    plane_labels_visible_only.SetRenderer(ren)
+    plane_labels_visible_only.SetInputConnection(cell_centers.GetOutputPort())
+    plane_labels = vtk.vtkLabeledDataMapper()
+    plane_labels.SetLabelModeToLabelScalars()
+    plane_labels.SetInputConnection(plane_labels_visible_only.GetOutputPort())
+    plane_labels_actor = vtk.vtkActor2D()
+    plane_labels_actor.SetMapper(plane_labels)
+    ren.AddActor(plane_labels_actor)
 
-kq_cell_centers = vtk.vtkCellCenters()
-if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    kq_cell_centers.SetInputData(surface)
-else:
-    kq_cell_centers.SetInput(surface)
-kq_labels = vtk.vtkLabeledDataMapper()
-kq_labels.SetInputConnection(kq_cell_centers.GetOutputPort())
-kq_labels.SetLabelModeToLabelScalars()
-kq_labels.SetLabelFormat("%.0f")
-kq_labels.GetLabelTextProperty().SetJustificationToCentered()
-kq_labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
-kq_labels_actor = vtk.vtkActor2D()
-kq_labels_actor.SetMapper(kq_labels)
-#ren.AddActor(kq_labels_actor)
+    kq_cell_centers = vtk.vtkCellCenters()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        kq_cell_centers.SetInputData(surface)
+    else:
+        kq_cell_centers.SetInput(surface)
+    kq_visible_only = vtk.vtkSelectVisiblePoints()
+    kq_visible_only.SetRenderer(ren)
+    kq_visible_only.SetInputConnection(kq_cell_centers.GetOutputPort())
+    kq_labels = vtk.vtkLabeledDataMapper()
+    kq_labels.SetInputConnection(kq_visible_only.GetOutputPort())
+    kq_labels.SetLabelModeToLabelScalars()
+    kq_labels.SetLabelFormat("%.0f")
+    kq_labels.GetLabelTextProperty().SetJustificationToCentered()
+    kq_labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
+    kq_labels_actor = vtk.vtkActor2D()
+    kq_labels_actor.SetMapper(kq_labels)
+    ren.AddActor(kq_labels_actor)
 
 iren.Initialize()
  
