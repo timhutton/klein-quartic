@@ -196,7 +196,7 @@ ren.AddActor(tubeActor)
 
 plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 plane_trans = vtk.vtkTransform()
-plane_trans.Translate(0,0,-0.75)
+plane_trans.Translate(all_verts[0])
 plane_trans.Scale(0.7,0.7,0.7)
 trans = vtk.vtkTransformPolyDataFilter()
 trans.SetTransform(plane_trans)
@@ -300,6 +300,32 @@ for iFace in range(plane.GetNumberOfPolys()):
         face += [ iv ]
     faces += [ face ]
 outputOBJ( verts, faces, 'plane.obj' )
+
+# correspond the vertices
+plane_to_kq = { 0:0,1:8,2:15,3:14,4:18,5:17,6:16,7:9,8:10,9:30,10:31,11:24,12:25,13:26,
+                14:22,15:23 } # TODO: complete this
+
+draw_lines = False
+if draw_lines:
+    lines = vtk.vtkPolyData()
+    pts = vtk.vtkPoints()
+    cells = vtk.vtkCellArray()
+    for iPlanePt,iKQPoint in plane_to_kq.iteritems():
+        cells.InsertNextCell(2)
+        cells.InsertCellPoint( pts.InsertNextPoint( surface.GetPoint(iKQPoint) ) )
+        cells.InsertCellPoint( pts.InsertNextPoint( trans.GetOutput().GetPoint(iPlanePt) ) )
+    lines.SetPoints(pts)
+    lines.SetLines(cells)
+    mapper = vtk.vtkPolyDataMapper()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        mapper.SetInputData(lines)
+    else:
+        mapper.SetInput(lines)
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetColor(0,0,0)
+    ren.AddActor(actor)
+
 
 iren.Initialize()
  
