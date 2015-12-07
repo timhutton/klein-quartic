@@ -186,4 +186,13 @@ def getDual( pd ):
     dual_pd = vtk.vtkPolyData()
     dual_pd.SetPoints( points )
     dual_pd.SetPolys( cells )
-    return dual_pd
+
+    # merge duplicate points
+    cleaner = vtk.vtkCleanPolyData()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        cleaner.SetInputData( dual_pd )
+    else:
+        cleaner.SetInput( dual_pd )
+    cleaner.SetTolerance(0.0001)
+    cleaner.Update()
+    return cleaner.GetOutput()

@@ -110,8 +110,6 @@ flat_inner_verts,flat_inner_faces = makeFlatHeptagon( all_verts, inner_faces[0] 
 outputOBJ( flat_inner_verts, flat_inner_faces, 'flat_inner.obj' )
 # For printing: load both into ParaView, and view in 2D mode, to get at same scale without distortion.
 
-print 'Outputted .obj files.'
-
 # ------ visualise with VTK --------
     
 ren = vtk.vtkRenderer()
@@ -262,6 +260,46 @@ if label_faces:
     kq_labels_actor = vtk.vtkActor2D()
     kq_labels_actor.SetMapper(kq_labels)
     ren.AddActor(kq_labels_actor)
+    
+label_points = False
+if label_points:
+    for pdc in [ trans.GetOutput(), surface ]:
+        pd = vtk.vtkPolyData()
+        pd.ShallowCopy(pdc)
+        pointData = vtk.vtkFloatArray()
+        for val in range(pd.GetNumberOfPoints()):
+            pointData.InsertNextValue( val )
+        pd.GetPointData().SetScalars( pointData )
+        visible_only = vtk.vtkSelectVisiblePoints()
+        if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+            visible_only.SetInputData( pd )
+        else:
+            visible_only.SetInput( pd )
+        visible_only.SetRenderer(ren)
+        labels = vtk.vtkLabeledDataMapper()
+        labels.SetInputConnection(visible_only.GetOutputPort())
+        labels.SetLabelFormat("%.0f")
+        labels.GetLabelTextProperty().SetJustificationToCentered()
+        labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
+        labels.SetLabelModeToLabelScalars()
+        labels_actor = vtk.vtkActor2D()
+        labels_actor.SetMapper(labels)
+        ren.AddActor(labels_actor)
+    
+# output the plane as OBJ
+verts = []
+for i in range(plane.GetNumberOfPoints()):
+    verts += [ plane.GetPoint(i) ]
+faces = []
+for iFace in range(plane.GetNumberOfPolys()):
+    face = []
+    iverts = vtk.vtkIdList()
+    plane.GetCellPoints( iFace, iverts )
+    for iiv in range(iverts.GetNumberOfIds()):
+        iv = iverts.GetId(iiv)
+        face += [ iv ]
+    faces += [ face ]
+outputOBJ( verts, faces, 'plane.obj' )
 
 iren.Initialize()
  
