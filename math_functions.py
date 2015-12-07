@@ -16,6 +16,7 @@
     along with klein-quartic. If not, see <http://www.gnu.org/licenses/>.
 '''
 
+import itertools
 import math
 import vtk
 
@@ -104,16 +105,6 @@ def getHyperbolicPlaneTiling( schlafli1, schlafli2, num_levels):
         nl = mag( n )
         sphere_centers += [ mul( n, d / nl ) ]
 
-    # make a list of lists of sphere ids to use
-    sphere_lists = [ [] ]
-    iList = 0
-    for iLevel in range(num_levels):
-        num_lists = len( sphere_lists )
-        while iList < num_lists:
-            for iExtraSphere in range(num_spheres):
-                sphere_lists += [ sphere_lists[ iList ] + [ iExtraSphere ] ]
-            iList += 1
-
     append = vtk.vtkAppendPolyData()
 
     point_locator = vtk.vtkPointLocator()
@@ -121,34 +112,32 @@ def getHyperbolicPlaneTiling( schlafli1, schlafli2, num_levels):
     bounds = [-10,10,-10,10,-10,10]
     point_locator.InitPointInsertion(locator_points,bounds)
 
-    for iSphereList in range( len(sphere_lists) ):
-        sphere_list = sphere_lists[iSphereList]
-        # make a cell by reflecting the starting cell in the order listed
-        pointIds = []
-        points = vtk.vtkPoints()
-        centroid = [0,0,0]
-        for iV in range(num_vertices):
-            p = vertex_coords[iV]
-            for iSphereEntry in range( len(sphere_list) ):
-                iSphere = sphere_list[iSphereEntry]
-                p = sphereInversion( p, sphere_centers[iSphere], R )
-            pointIds += [ points.InsertNextPoint( p ) ]
-            centroid = add( centroid, p )
-        # only add this cell if we haven't seen this centroid before
-        centroid = mul( centroid, 1.0 / num_vertices )
-        if point_locator.IsInsertedPoint( centroid ) < 0:
-            pd = vtk.vtkPolyData()
-            cells = vtk.vtkCellArray()
-            cells.InsertNextCell( len(face) )
-            for v in face:
-                cells.InsertCellPoint( v )
-            pd.SetPoints( points )
-            pd.SetPolys( cells )
-            if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-                append.AddInputData( pd )
-            else:
-                append.AddInput( pd )
-            point_locator.InsertNextPoint( centroid )
+    for depth in range(num_levels+1):
+        for sphere_list in itertools.product(range(num_spheres),repeat=depth):
+            # make a cell by reflecting the starting cell in the order listed
+            points = vtk.vtkPoints()
+            centroid = (0,0,0)
+            for iV in range(num_vertices):
+                p = vertex_coords[iV]
+                for iSphere in sphere_list:
+                    p = sphereInversion( p, sphere_centers[iSphere], R )
+                points.InsertNextPoint( p )
+                centroid = add( centroid, p )
+            # only add this cell if we haven't seen this centroid before
+            centroid = mul( centroid, 1.0 / num_vertices )
+            if point_locator.IsInsertedPoint( centroid ) < 0:
+                pd = vtk.vtkPolyData()
+                cells = vtk.vtkCellArray()
+                cells.InsertNextCell( len(face) )
+                for v in face:
+                    cells.InsertCellPoint( v )
+                pd.SetPoints( points )
+                pd.SetPolys( cells )
+                if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+                    append.AddInputData( pd )
+                else:
+                    append.AddInput( pd )
+                point_locator.InsertNextPoint( centroid )
 
     # merge duplicate points
     cleaner = vtk.vtkCleanPolyData()
