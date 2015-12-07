@@ -228,7 +228,7 @@ planeActor.GetProperty().SetAmbient(1)
 planeActor.GetProperty().SetDiffuse(0)
 ren.AddActor(planeActor)
 
-label_faces = True
+label_faces = False
 if label_faces:
     cell_centers = vtk.vtkCellCenters()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
