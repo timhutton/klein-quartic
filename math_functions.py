@@ -86,6 +86,69 @@ def getInversionCircleForPlaneTiling( edge_length, schlafli1, schlafli2 ):
 def getHyperbolicPlaneTiling( schlafli1, schlafli2, num_levels):
     '''Returns a vtkPolyData of the Schlafli tiling {schlafli1,schlafli2} out to num_levels deep around the central cell.'''
     
+    # define the central cell
+    edge_length = 1.0
+    num_vertices = schlafli1
+    vertex_coords = []
+    r1 = getPolygonRadius( edge_length, schlafli1 );
+    for i in range(num_vertices):
+        angle = ( i + 0.5 ) * 2.0 * math.pi / schlafli1
+        vertex_coords += [ ( r1 * math.cos( angle ), r1 * math.sin( angle ), 0.0 ) ]
+    face = range(num_vertices)
+
+    # define the mirror spheres
+    num_spheres = num_vertices
+    R,d = getInversionCircleForPlaneTiling( edge_length, schlafli1, schlafli2 )
+    sphere_centers = []
+    for i in range(num_vertices):
+        n = av( vertex_coords[i], vertex_coords[(i+1)%num_vertices] )
+        nl = mag( n )
+        sphere_centers += [ mul( n, d / nl ) ]
+
+    append = vtk.vtkAppendPolyData()
+
+    point_locator = vtk.vtkPointLocator()
+    locator_points = vtk.vtkPoints()
+    bounds = [-10,10,-10,10,-10,10]
+    point_locator.InitPointInsertion(locator_points,bounds)
+
+    for depth in range(num_levels+1):
+        for sphere_list in itertools.product(range(num_spheres),repeat=depth):
+            # make a cell by reflecting the starting cell in the order listed
+            points = vtk.vtkPoints()
+            centroid = (0,0,0)
+            for iV in range(num_vertices):
+                p = vertex_coords[iV]
+                for iSphere in sphere_list:
+                    p = sphereInversion( p, sphere_centers[iSphere], R )
+                points.InsertNextPoint( p )
+                centroid = add( centroid, p )
+            # only add this cell if we haven't seen this centroid before
+            centroid = mul( centroid, 1.0 / num_vertices )
+            if point_locator.IsInsertedPoint( centroid ) < 0:
+                pd = vtk.vtkPolyData()
+                cells = vtk.vtkCellArray()
+                cells.InsertNextCell( len(face) )
+                for v in face:
+                    cells.InsertCellPoint( v )
+                pd.SetPoints( points )
+                pd.SetPolys( cells )
+                if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+                    append.AddInputData( pd )
+                else:
+                    append.AddInput( pd )
+                point_locator.InsertNextPoint( centroid )
+
+    # merge duplicate points
+    cleaner = vtk.vtkCleanPolyData()
+    cleaner.SetInputConnection( append.GetOutputPort() )
+    cleaner.SetTolerance(0.0001)
+    cleaner.Update()
+    return cleaner.GetOutput()
+    
+def getHyperbolicPlaneTilingNew( schlafli1, schlafli2, num_levels):
+    '''Returns a vtkPolyData of the Schlafli tiling {schlafli1,schlafli2} out to num_levels deep around the central cell.'''
+    
     pd = vtk.vtkPolyData()
     pd_points = vtk.vtkPoints()
     pd_polys = vtk.vtkCellArray()
