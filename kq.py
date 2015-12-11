@@ -122,8 +122,8 @@ iren.SetInteractorStyle(track)
 ren.SetBackground(0.95, 0.9, 0.85)
 renWin.SetSize(800, 600)
   
-surface = makePolyData( corner_verts + arm_sides, faces_as_tris )
-edges = makePolyData( corner_verts + arm_sides, outer_faces + inner_faces )
+surface = makePolyData( all_verts, faces_as_tris )
+edges = makePolyData( all_verts, outer_faces + inner_faces )
 
 kq_ids    = [ 1, 2, 0, 23, 20, 8, 22, 19, 7, 21, 18, 6, 12, 14, 13, 3, 17, 11, 5, 16, 10, 4, 15, 9 ]
 plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14, 16, 100, 20, 103, 21, 19, 104, 105, 106, 107, 108, 22, 18, 23 ]
@@ -131,6 +131,7 @@ outer_or_inner_type = [ 0,0,0,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0 ]
 tetrahedron_corner_type = [ 0,0,0,2,1,3,1,3,2,1,3,2,0,0,0,1,3,2,1,3,2,1,3,2 ]
 three_colors_type = [ 1,0,2,0,2,1,0,2,1,2,1,0,1,0,2,0,2,1,0,2,1,2,1,0 ]
 affinity_groups_type = [ 2,0,1,2,0,1,0,1,2,2,0,1,2,0,1,2,0,1,0,1,2,0,1,2 ]
+petrie_polygons = [ [3,45,44,5,9,10,30,29],[54,55,48,49,50,51,52,53],[22,23,35,34,46,47,27,26] ]
 
 cellIds = flatten( [i]*5 for i in kq_ids ) # each of the 24 heptagons is made of 5 triangles
 surfaceCellData = vtk.vtkFloatArray()
@@ -152,79 +153,86 @@ for i in range(24):
     #lut.SetTableValue( i, type_colors[ affinity_groups_type[ i ] ] )
 lut.SetTableValue( 24, 1, 1, 1 )
 
-surfaceMapper = vtk.vtkPolyDataMapper()
-if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    surfaceMapper.SetInputData(surface)
-else:
-    surfaceMapper.SetInput(surface)
-surfaceMapper.SetScalarRange(0,24)
-surfaceMapper.SetLookupTable(lut)
-surfaceActor = vtk.vtkActor()
-surfaceActor.SetMapper(surfaceMapper)
-ren.AddActor(surfaceActor)
+if True: # draw surface
+    surfaceMapper = vtk.vtkPolyDataMapper()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        surfaceMapper.SetInputData(surface)
+    else:
+        surfaceMapper.SetInput(surface)
+    surfaceMapper.SetScalarRange(0,24)
+    surfaceMapper.SetLookupTable(lut)
+    #surfaceMapper.ScalarVisibilityOff()
+    surfaceActor = vtk.vtkActor()
+    surfaceActor.SetMapper(surfaceMapper)
+    #surfaceActor.GetProperty().SetOpacity(0.7)
+    ren.AddActor(surfaceActor)
 
-lines = vtk.vtkExtractEdges()
-if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    lines.SetInputData(edges)
-else:
-    lines.SetInput(edges)
-tube = vtk.vtkTubeFilter()
-tube.SetInputConnection(lines.GetOutputPort())
-tube.SetRadius(0.005)
-tube.SetNumberOfSides(20)
+if True: # draw edges
+    lines = vtk.vtkExtractEdges()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        lines.SetInputData(edges)
+    else:
+        lines.SetInput(edges)
+    tube = vtk.vtkTubeFilter()
+    tube.SetInputConnection(lines.GetOutputPort())
+    tube.SetRadius(0.005)
+    tube.SetNumberOfSides(20)
 
-sphere = vtk.vtkSphereSource()
-sphere.SetRadius(0.005)
-sphere.SetPhiResolution(20)
-sphere.SetThetaResolution(20)
-vertices = vtk.vtkGlyph3D()
-if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    vertices.SetInputData(edges)
-else:
-    vertices.SetInput(edges)
-vertices.SetSourceConnection(sphere.GetOutputPort())
+    sphere = vtk.vtkSphereSource()
+    sphere.SetRadius(0.005)
+    sphere.SetPhiResolution(20)
+    sphere.SetThetaResolution(20)
+    vertices = vtk.vtkGlyph3D()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        vertices.SetInputData(edges)
+    else:
+        vertices.SetInput(edges)
+    vertices.SetSourceConnection(sphere.GetOutputPort())
 
-borders = vtk.vtkAppendPolyData()
-borders.AddInputConnection(tube.GetOutputPort())
-borders.AddInputConnection(vertices.GetOutputPort())
-tubeMapper = vtk.vtkPolyDataMapper()
-tubeMapper.SetInputConnection(borders.GetOutputPort())
-tubeActor = vtk.vtkActor()
-tubeActor.SetMapper(tubeMapper)
-tubeActor.GetProperty().SetColor(0,0,0)
-ren.AddActor(tubeActor)
+    borders = vtk.vtkAppendPolyData()
+    borders.AddInputConnection(tube.GetOutputPort())
+    borders.AddInputConnection(vertices.GetOutputPort())
+    tubeMapper = vtk.vtkPolyDataMapper()
+    tubeMapper.SetInputConnection(borders.GetOutputPort())
+    tubeActor = vtk.vtkActor()
+    tubeActor.SetMapper(tubeMapper)
+    tubeActor.GetProperty().SetColor(0,0,0)
+    ren.AddActor(tubeActor)
 
 plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
-plane_trans = vtk.vtkTransform()
-plane_trans.Translate(all_verts[0])
-plane_trans.Scale(0.7,0.7,0.7)
-trans = vtk.vtkTransformPolyDataFilter()
-trans.SetTransform(plane_trans)
-if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    trans.SetInputData(plane)
-else:
-    trans.SetInput(plane)
-trans.Update()
-plane_scalars = vtk.vtkIntArray()
-plane_scalars.SetNumberOfValues( trans.GetOutput().GetNumberOfPolys() )
-for i in range( trans.GetOutput().GetNumberOfPolys() ):
-    plane_scalars.SetValue( i, plane_ids[ i ] if i in range( len( plane_ids ) ) else 99 )
-trans.GetOutput().GetCellData().SetScalars( plane_scalars )
 
-planeMapper = vtk.vtkPolyDataMapper()
-if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    planeMapper.SetInputData( trans.GetOutput() )
-else:
-    planeMapper.SetInput( trans.GetOutput() )
-planeMapper.SetLookupTable(lut)
-planeMapper.SetScalarModeToUseCellData()
-planeMapper.SetScalarRange(0,24)
-planeActor = vtk.vtkActor()
-planeActor.SetMapper(planeMapper)
-planeActor.GetProperty().EdgeVisibilityOn()
-planeActor.GetProperty().SetAmbient(1)
-planeActor.GetProperty().SetDiffuse(0)
-ren.AddActor(planeActor)
+draw_plane = True
+if draw_plane:
+    plane_trans = vtk.vtkTransform()
+    plane_trans.Translate(all_verts[0])
+    plane_trans.Scale(0.7,0.7,0.7)
+    trans = vtk.vtkTransformPolyDataFilter()
+    trans.SetTransform(plane_trans)
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        trans.SetInputData(plane)
+    else:
+        trans.SetInput(plane)
+    trans.Update()
+    plane_scalars = vtk.vtkIntArray()
+    plane_scalars.SetNumberOfValues( trans.GetOutput().GetNumberOfPolys() )
+    for i in range( trans.GetOutput().GetNumberOfPolys() ):
+        plane_scalars.SetValue( i, plane_ids[ i ] if i in range( len( plane_ids ) ) else 99 )
+    trans.GetOutput().GetCellData().SetScalars( plane_scalars )
+
+    planeMapper = vtk.vtkPolyDataMapper()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        planeMapper.SetInputData( trans.GetOutput() )
+    else:
+        planeMapper.SetInput( trans.GetOutput() )
+    planeMapper.SetLookupTable(lut)
+    planeMapper.SetScalarModeToUseCellData()
+    planeMapper.SetScalarRange(0,24)
+    planeActor = vtk.vtkActor()
+    planeActor.SetMapper(planeMapper)
+    planeActor.GetProperty().EdgeVisibilityOn()
+    planeActor.GetProperty().SetAmbient(1)
+    planeActor.GetProperty().SetDiffuse(0)
+    ren.AddActor(planeActor)
 
 label_faces = False
 if label_faces:
@@ -326,11 +334,60 @@ if draw_lines:
     actor.GetProperty().SetColor(0,0,0)
     ren.AddActor(actor)
 
+draw_petrie_polygons = False
+if draw_petrie_polygons:
+    for ipp,pp in enumerate(petrie_polygons):
+        pd = makePolyData( all_verts, [pp] )
+        cleaner = vtk.vtkCleanPolyData()
+        if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+            cleaner.SetInputData(pd)
+        else:
+            cleaner.SetInput(pd)
+        lines = vtk.vtkExtractEdges()
+        lines.SetInputConnection(cleaner.GetOutputPort())
+        tube = vtk.vtkTubeFilter()
+        tube.SetInputConnection(lines.GetOutputPort())
+        tube.SetRadius(0.02)
+        tube.SetNumberOfSides(20)
+        sphere = vtk.vtkSphereSource()
+        sphere.SetRadius(0.02)
+        sphere.SetPhiResolution(20)
+        sphere.SetThetaResolution(20)
+        vertices = vtk.vtkGlyph3D()
+        vertices.SetInputConnection(cleaner.GetOutputPort())
+        vertices.SetSourceConnection(sphere.GetOutputPort())
+        borders = vtk.vtkAppendPolyData()
+        borders.AddInputConnection(tube.GetOutputPort())
+        borders.AddInputConnection(vertices.GetOutputPort())
+        petrieMapper = vtk.vtkPolyDataMapper()
+        petrieMapper.SetInputConnection(borders.GetOutputPort())
+        petrieActor = vtk.vtkActor()
+        petrieActor.SetMapper(petrieMapper)
+        petrieActor.GetProperty().SetColor(type_colors[ipp][:3])
+        ren.AddActor(petrieActor)
 
 iren.Initialize()
  
 ren.ResetCamera()
-ren.GetActiveCamera().Zoom(1.5)
+ren.GetActiveCamera().Zoom(1.8)
+ren.GetActiveCamera().SetPosition(0,-6,3)
+ren.GetActiveCamera().SetViewUp(0,0,1)
 renWin.Render()
+
+render_orbit = False
+if render_orbit:
+    N = 1000
+    wif = vtk.vtkWindowToImageFilter()
+    wif.SetInput(renWin)
+    png = vtk.vtkPNGWriter()
+    png.SetInputConnection(wif.GetOutputPort())
+    for iFrame in range(N):
+        theta = iFrame * 2 * math.pi / N
+        png.SetFileName("test"+str(iFrame).zfill(4)+".png")
+        ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
+        wif.Modified()
+        wif.Update()
+        renWin.Render()
+        png.Write()
  
 iren.Start()
