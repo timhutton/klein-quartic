@@ -146,57 +146,6 @@ def getHyperbolicPlaneTiling( schlafli1, schlafli2, num_levels):
     cleaner.Update()
     return cleaner.GetOutput()
     
-def getHyperbolicPlaneTilingNew( schlafli1, schlafli2, num_levels):
-    '''Returns a vtkPolyData of the Schlafli tiling {schlafli1,schlafli2} out to num_levels deep around the central cell.'''
-    
-    pd = vtk.vtkPolyData()
-    pd_points = vtk.vtkPoints()
-    pd_polys = vtk.vtkCellArray()
-    pd.SetPoints( pd_points )
-    pd.SetPolys( pd_polys )
-
-    # add the central cell
-    edge_length = 1.0
-    num_vertices = schlafli1
-    vertex_coords = []
-    r1 = getPolygonRadius( edge_length, schlafli1 );
-    pd_polys.InsertNextCell( num_vertices )
-    for i in range(num_vertices):
-        angle = ( i + 0.5 ) * 2.0 * math.pi / schlafli1
-        p = ( r1 * math.cos( angle ), r1 * math.sin( angle ), 0.0 )
-        vertex_coords += [ p ]
-        pd_polys.InsertCellPoint( pd_points.InsertNextPoint( p ) )
-        
-    # define the mirror spheres
-    R,d = getInversionCircleForPlaneTiling( edge_length, schlafli1, schlafli2 )
-    sphere_centers = [ mul( norm( add( vertex_coords[i], vertex_coords[(i+1)%num_vertices] ) ), d ) for i in range(num_vertices) ]
-
-    point_locator = vtk.vtkPointLocator()
-    locator_points = vtk.vtkPoints()
-    bounds = [-10,10,-10,10,-10,10]
-    point_locator.InitPointInsertion(locator_points,bounds)
-    point_locator.InsertNextPoint( (0,0,0) )
-
-    for sphere_list in itertools.product(range(num_vertices),repeat=num_levels):
-        points = vertex_coords[:]
-        for iSphere in sphere_list:
-            points = [ sphereInversion( p, sphere_centers[iSphere], R ) for p in points ]
-            centroid = mul( reduce( add, points ), 1.0 / num_vertices )
-            if point_locator.IsInsertedPoint( centroid ) < 0:
-                point_locator.InsertNextPoint( centroid )
-                pd_polys.InsertNextCell( num_vertices )
-                for p in points:
-                    pd_polys.InsertCellPoint( pd_points.InsertNextPoint( p ) )
-
-    # merge duplicate points
-    cleaner = vtk.vtkCleanPolyData()
-    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-        cleaner.SetInputData( pd )
-    else:
-        cleaner.SetInput( pd )
-    cleaner.SetTolerance(0.0001)
-    cleaner.Update()
-    return cleaner.GetOutput()
         
 def getNumberOfPointsSharedByTwoCells( pd, iCell1, iCell2 ):
     '''Compute the number of shared points between iCell1 and iCell2 in the vtkPolyData pd.'''

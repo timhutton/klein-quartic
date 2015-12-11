@@ -153,7 +153,10 @@ for i in range(24):
     #lut.SetTableValue( i, type_colors[ affinity_groups_type[ i ] ] )
 lut.SetTableValue( 24, 1, 1, 1 )
 
-if True: # draw surface
+label_faces = False
+
+draw_surface = True
+if draw_surface:
     surfaceMapper = vtk.vtkPolyDataMapper()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
         surfaceMapper.SetInputData(surface)
@@ -166,8 +169,28 @@ if True: # draw surface
     surfaceActor.SetMapper(surfaceMapper)
     #surfaceActor.GetProperty().SetOpacity(0.7)
     ren.AddActor(surfaceActor)
+    
+    if label_faces:
+        kq_cell_centers = vtk.vtkCellCenters()
+        if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+            kq_cell_centers.SetInputData(surface)
+        else:
+            kq_cell_centers.SetInput(surface)
+        kq_visible_only = vtk.vtkSelectVisiblePoints()
+        kq_visible_only.SetRenderer(ren)
+        kq_visible_only.SetInputConnection(kq_cell_centers.GetOutputPort())
+        kq_labels = vtk.vtkLabeledDataMapper()
+        kq_labels.SetInputConnection(kq_visible_only.GetOutputPort())
+        kq_labels.SetLabelModeToLabelScalars()
+        kq_labels.SetLabelFormat("%.0f")
+        kq_labels.GetLabelTextProperty().SetJustificationToCentered()
+        kq_labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
+        kq_labels_actor = vtk.vtkActor2D()
+        kq_labels_actor.SetMapper(kq_labels)
+        ren.AddActor(kq_labels_actor)
 
-if True: # draw edges
+draw_edges = True
+if draw_edges:
     lines = vtk.vtkExtractEdges()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
         lines.SetInputData(edges)
@@ -234,7 +257,6 @@ if draw_plane:
     planeActor.GetProperty().SetDiffuse(0)
     ren.AddActor(planeActor)
 
-label_faces = False
 if label_faces:
     cell_centers = vtk.vtkCellCenters()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
@@ -251,24 +273,6 @@ if label_faces:
     plane_labels_actor.SetMapper(plane_labels)
     ren.AddActor(plane_labels_actor)
 
-    kq_cell_centers = vtk.vtkCellCenters()
-    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-        kq_cell_centers.SetInputData(surface)
-    else:
-        kq_cell_centers.SetInput(surface)
-    kq_visible_only = vtk.vtkSelectVisiblePoints()
-    kq_visible_only.SetRenderer(ren)
-    kq_visible_only.SetInputConnection(kq_cell_centers.GetOutputPort())
-    kq_labels = vtk.vtkLabeledDataMapper()
-    kq_labels.SetInputConnection(kq_visible_only.GetOutputPort())
-    kq_labels.SetLabelModeToLabelScalars()
-    kq_labels.SetLabelFormat("%.0f")
-    kq_labels.GetLabelTextProperty().SetJustificationToCentered()
-    kq_labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
-    kq_labels_actor = vtk.vtkActor2D()
-    kq_labels_actor.SetMapper(kq_labels)
-    ren.AddActor(kq_labels_actor)
-    
 label_points = False
 if label_points:
     for pdc in [ trans.GetOutput(), surface ]:
@@ -369,7 +373,7 @@ if draw_petrie_polygons:
 iren.Initialize()
  
 ren.ResetCamera()
-ren.GetActiveCamera().Zoom(1.8)
+ren.GetActiveCamera().Zoom(1.5)
 ren.GetActiveCamera().SetPosition(0,-6,3)
 ren.GetActiveCamera().SetViewUp(0,0,1)
 renWin.Render()
@@ -386,8 +390,11 @@ if render_orbit:
         png.SetFileName("test"+str(iFrame).zfill(4)+".png")
         ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
         wif.Modified()
-        wif.Update()
         renWin.Render()
         png.Write()
- 
+
+print '             Left drag : rotate'
+print '     Shift + Left drag : pan'
+print 'Right drag up and down : zoom'        
+print '      Ctrl + Left drag : roll'        
 iren.Start()
