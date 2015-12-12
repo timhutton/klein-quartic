@@ -273,7 +273,7 @@ if label_faces:
     plane_labels_actor.SetMapper(plane_labels)
     ren.AddActor(plane_labels_actor)
 
-label_points = False
+label_points = True
 if label_points:
     for pdc in [ trans.GetOutput(), surface ]:
         pd = vtk.vtkPolyData()
@@ -315,7 +315,10 @@ outputOBJ( verts, faces, 'plane.obj' )
 
 # correspond the vertices
 plane_to_kq = { 0:0,1:8,2:15,3:14,4:18,5:17,6:16,7:9,8:10,9:30,10:31,11:24,12:25,13:26,
-                14:22,15:23 } # TODO: complete this
+                14:22,15:23,16:5,17:44,18:43,19:42,20:51,21:50,22:49,23:7,
+                24:6,25:33,26:34,27:35,28:29,29:3,30:53,31:52,32:52,33:53,34:54,35:19,
+                36:11,37:38,38:37,39:36,40:36,41:37,42:2,43:21,44:13,45:1,46:40,47:41,
+                48:41,49:40,50:47,51:27,52:28,53:4,54:12 } # TODO: complete this
 
 draw_lines = False
 if draw_lines:
