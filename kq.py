@@ -45,13 +45,16 @@ inner_tet_verts = [ mul(p,0.6) for p in tet_verts ]
 tet_centers = [ av( tet_verts[i], inner_tet_verts[i] ) for i in range(4) ]
 arm_centers = [ av( tet_centers[a], tet_centers[b] ) for a,b in tet_edges ]
 arm_edges = [ av( tet_verts[a], tet_verts[b] ) for a,b in tet_edges ]
-twist = [ 1.5, 2.5+1-0.5, 3.5-0.5, 4.5+0.5, 5.5-1+0.5, 6.5, 7.5-1, 8.5+1 ]
-stagger = [ 0.1, -0.1, 0.25, -0.25, 0.1, -0.1, 0.3, -0.3 ]
-radius = [ 0.7, 1, 1, 1, 1, 0.7, 1, 1 ]
+# first ix:  8        9        10       11       12     13      14     15
+twist   = [ 1.5,       3,       3,      -3,      -3,   -1.5,  -1.5,    1.5  ]
+stagger = [ 0.1,    -0.1,    0.25,   -0.25,     0.1,   -0.1,   0.3,   -0.3  ]
+radius  = [ 0.7,       1,       1,       1,       1,    0.7,     1,      1  ]
+s = 1.5
+# pairs: 8,13   14,15,   9,12    10,11
 arm_sides = [ add( add( add( arm_centers[i], \
-                             mul( cross( sub( arm_edges[i], arm_centers[i] ), sub( tet_verts[a], arm_centers[i] ) ), radius[j] * math.sin(twist[j]*2*math.pi/8) ) ), \
-                             mul( sub( arm_edges[i], arm_centers[i] ), radius[j] * math.cos(twist[j]*2*math.pi/8) ) ), \
-                             mul( sub( tet_verts[a], arm_centers[i] ), stagger[j] ) ) \
+                             mul( cross( sub( arm_edges[i], arm_centers[i] ), sub( tet_centers[a], arm_centers[i] ) ), s*radius[j] * math.sin(twist[j]*2*math.pi/8) ) ), \
+                             mul( sub( arm_edges[i], arm_centers[i] ), s*radius[j] * math.cos(twist[j]*2*math.pi/8) ) ), \
+                             mul( sub( tet_centers[a], arm_centers[i] ), stagger[j] ) ) \
               for i,(a,b) in enumerate(tet_edges) for j in range(8) ]
 
 # then join the vertices together to make 12 outer heptagons and 12 inner ones
@@ -224,18 +227,19 @@ if draw_edges:
 
 plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 
+plane_trans = vtk.vtkTransform()
+plane_trans.Translate(all_verts[0])
+plane_trans.Scale(0.7,0.7,0.7)
+trans = vtk.vtkTransformPolyDataFilter()
+trans.SetTransform(plane_trans)
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    trans.SetInputData(plane)
+else:
+    trans.SetInput(plane)
+trans.Update()
+
 draw_plane = True
 if draw_plane:
-    plane_trans = vtk.vtkTransform()
-    plane_trans.Translate(all_verts[0])
-    plane_trans.Scale(0.7,0.7,0.7)
-    trans = vtk.vtkTransformPolyDataFilter()
-    trans.SetTransform(plane_trans)
-    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-        trans.SetInputData(plane)
-    else:
-        trans.SetInput(plane)
-    trans.Update()
     plane_scalars = vtk.vtkIntArray()
     plane_scalars.SetNumberOfValues( trans.GetOutput().GetNumberOfPolys() )
     for i in range( trans.GetOutput().GetNumberOfPolys() ):
