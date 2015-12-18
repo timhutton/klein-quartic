@@ -137,6 +137,7 @@ plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14
 outer_or_inner_type = [ 0,0,0,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0 ]
 tetrahedron_corner_type = [ 0,0,0,2,1,3,1,3,2,1,3,2,0,0,0,1,3,2,1,3,2,1,3,2 ]
 three_colors_type = [ 1,0,2,0,2,1,0,2,1,2,1,0,1,0,2,0,2,1,0,2,1,2,1,0 ]
+papercraft_type     = [ 0,1,2,1,0,1,2,3,1,2,3,0,0,2,1,3,2,3,0,1,0,3,2,3 ] # printing 3 inner and 3 outer on 4 sheets of different card
 affinity_groups_type = [ 2,0,1,2,0,1,0,1,2,2,0,1,2,0,1,2,0,1,0,1,2,0,1,2 ]
 petrie_polygons = [ [3,45,44,5,9,10,30,29],[54,55,48,49,50,51,52,53],[22,23,35,34,46,47,27,26] ]
 
@@ -157,6 +158,7 @@ for i in range(24):
     #lut.SetTableValue( i, type_colors[ outer_or_inner_type[ i ] ] )
     #lut.SetTableValue( i, type_colors[ tetrahedron_corner_type[ i ] ] )
     #lut.SetTableValue( i, type_colors[ three_colors_type[ i ] ] )
+    #lut.SetTableValue( i, type_colors[ papercraft_type[ i ] ] )
     #lut.SetTableValue( i, type_colors[ affinity_groups_type[ i ] ] )
 lut.SetTableValue( 24, 1, 1, 1 )
 
@@ -265,21 +267,21 @@ if draw_plane:
     planeActor.GetProperty().SetDiffuse(0)
     ren.AddActor(planeActor)
 
-if label_faces:
-    cell_centers = vtk.vtkCellCenters()
-    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-        cell_centers.SetInputData( trans.GetOutput() )
-    else:
-        cell_centers.SetInput( trans.GetOutput() )
-    plane_labels_visible_only = vtk.vtkSelectVisiblePoints()
-    plane_labels_visible_only.SetRenderer(ren)
-    plane_labels_visible_only.SetInputConnection(cell_centers.GetOutputPort())
-    plane_labels = vtk.vtkLabeledDataMapper()
-    plane_labels.SetLabelModeToLabelScalars()
-    plane_labels.SetInputConnection(plane_labels_visible_only.GetOutputPort())
-    plane_labels_actor = vtk.vtkActor2D()
-    plane_labels_actor.SetMapper(plane_labels)
-    ren.AddActor(plane_labels_actor)
+    if label_faces:
+        cell_centers = vtk.vtkCellCenters()
+        if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+            cell_centers.SetInputData( trans.GetOutput() )
+        else:
+            cell_centers.SetInput( trans.GetOutput() )
+        plane_labels_visible_only = vtk.vtkSelectVisiblePoints()
+        plane_labels_visible_only.SetRenderer(ren)
+        plane_labels_visible_only.SetInputConnection(cell_centers.GetOutputPort())
+        plane_labels = vtk.vtkLabeledDataMapper()
+        plane_labels.SetLabelModeToLabelScalars()
+        plane_labels.SetInputConnection(plane_labels_visible_only.GetOutputPort())
+        plane_labels_actor = vtk.vtkActor2D()
+        plane_labels_actor.SetMapper(plane_labels)
+        ren.AddActor(plane_labels_actor)
 
 label_points = False
 if label_points:
