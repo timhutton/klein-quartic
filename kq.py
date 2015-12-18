@@ -47,8 +47,8 @@ arm_centers = [ av( tet_centers[a], tet_centers[b] ) for a,b in tet_edges ]
 arm_edges = [ av( tet_verts[a], tet_verts[b] ) for a,b in tet_edges ]
 # first ix:  8        9        10       11       12     13      14     15
 twist   = [ 1.5,       3,       3,      -3,      -3,   -1.5,  -1.5,    1.5  ]
-stagger = [ 0.1,    -0.1,    0.25,   -0.25,     0.1,   -0.1,   0.3,   -0.3  ]
-radius  = [ 0.7,       1,       1,       1,       1,    0.7,     1,      1  ]
+stagger = [ 0.1,    -0.2,     0.4,    -0.4,     0.2,   -0.1,   0.3,   -0.3  ]
+radius  = [ 0.7,     0.8,       1,       1,     0.8,    0.7,     1,      1  ]
 s = 1.5
 # pairs: 8,13   14,15,   9,12    10,11
 arm_sides = [ add( add( add( arm_centers[i], \
@@ -107,11 +107,15 @@ def makeFlatHeptagon( verts, face ):
     return new_verts,orderings
 
 # Compute flat versions of the two heptagons, for making the shape out of card.
+# For printing: load both into ParaView, and view in 2D mode, to get at same scale without distortion.
 flat_outer_verts,flat_outer_faces = makeFlatHeptagon( all_verts, outer_faces[0] )
 outputOBJ( flat_outer_verts, flat_outer_faces, 'flat_outer.obj' )
 flat_inner_verts,flat_inner_faces = makeFlatHeptagon( all_verts, inner_faces[0] )
 outputOBJ( flat_inner_verts, flat_inner_faces, 'flat_inner.obj' )
-# For printing: load both into ParaView, and view in 2D mode, to get at same scale without distortion.
+
+# to check that all the heptagons of each type are congruent:
+#for i,f in enumerate( outer_faces + inner_faces ):
+#    outputOBJ( *makeFlatHeptagon( all_verts, f ), filename = 'flat_'+str(i)+'.obj' )
 
 # ------ visualise with VTK --------
     
@@ -279,7 +283,7 @@ if label_faces:
 
 label_points = False
 if label_points:
-    for pdc in [ trans.GetOutput(), surface ]:
+    for pdc in [ trans.GetOutput(), surface ] if draw_plane else [ surface ]:
         pd = vtk.vtkPolyData()
         pd.ShallowCopy(pdc)
         pointData = vtk.vtkFloatArray()
