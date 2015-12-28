@@ -119,6 +119,14 @@ outputOBJ( flat_inner_verts, flat_inner_faces, 'flat_inner.obj' )
 
 # ------ visualise with VTK --------
     
+
+print
+print '             Left drag : rotate'
+print '     Shift + Left drag : pan'
+print 'Right drag up and down : zoom'
+print '      Ctrl + Left drag : roll'
+print '\nRendering...'
+
 ren = vtk.vtkRenderer()
 renWin = vtk.vtkRenderWindow()
 renWin.AddRenderer(ren)
@@ -408,8 +416,4 @@ if render_orbit:
         renWin.Render()
         png.Write()
 
-print '             Left drag : rotate'
-print '     Shift + Left drag : pan'
-print 'Right drag up and down : zoom'        
-print '      Ctrl + Left drag : roll'        
 iren.Start()
