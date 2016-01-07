@@ -12,7 +12,7 @@ This image shows the 3D embedding of the Klein Quartic together with the corresp
 ### Papercraft model ###
 
 Make your own Klein Quartic by following these papercraft instructions.
-(EDIT (Niles): A few clarifications and an 8-fold coloring version are now in a 
+(EDIT (Niles): Clarifications and an 8-fold coloring version are now in the `papercraft`
 subdirectory.)
 
 [![papercraft-overview](https://cloud.githubusercontent.com/assets/647092/12025772/eda778ae-ada9-11e5-96dc-7a423e48a899.png)  (PDF, 3.3MB)](https://github.com/timhutton/klein-quartic/releases/download/0.1/KleinQuartic-papercraft-instructions_all.pdf)
