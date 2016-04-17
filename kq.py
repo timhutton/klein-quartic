@@ -24,7 +24,7 @@ except ImportError:
     print "\nThis script uses VTK, which you don't seem to have installed.\n"
     print "On Ubuntu: sudo apt-get install python-vtk, and then run with 'python kq.py'\n"
     print "On Windows: download python installer from http://vtk.org, install, add the bin folder to your PATH\n"
-    print "(eg. 'C:\Program Files\VTK-6.3.0\bin') and then run with 'vtkpython kq.py'"
+    print "(eg. 'C:\\Program Files\\VTK-6.3.0\\bin') and then run with 'vtkpython kq.py'"
     exit(1)
     
 import itertools
