@@ -259,7 +259,7 @@ if draw_plane:
     for i in range( trans.GetOutput().GetNumberOfPolys() ):
         plane_scalars.SetValue( i, plane_ids[ i ] if i in range( len( plane_ids ) ) else 99 )
     trans.GetOutput().GetCellData().SetScalars( plane_scalars )
-
+    
     planeMapper = vtk.vtkPolyDataMapper()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
         planeMapper.SetInputData( trans.GetOutput() )
@@ -268,6 +268,7 @@ if draw_plane:
     planeMapper.SetLookupTable(lut)
     planeMapper.SetScalarModeToUseCellData()
     planeMapper.SetScalarRange(0,24)
+    #planeMapper.ScalarVisibilityOff()
     planeActor = vtk.vtkActor()
     planeActor.SetMapper(planeMapper)
     planeActor.GetProperty().EdgeVisibilityOn()
@@ -363,6 +364,41 @@ if draw_lines:
     actor.SetMapper(mapper)
     actor.GetProperty().SetColor(0,0,0)
     ren.AddActor(actor)
+
+draw_folding = False
+if draw_folding:
+    folding = vtk.vtkPolyData()
+    pts = vtk.vtkPoints()
+    cells = vtk.vtkCellArray()
+    u = 0.05
+    for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
+        if iPlanePoly >= len( plane_ids ) or plane_ids[ iPlanePoly ] >= 24:
+            continue
+        cells.InsertNextCell( 7 )
+        for iPt in range( 7 ):
+            on_plane = trans.GetOutput().GetPoint( trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) )
+            on_mesh = surface.GetPoint( plane_to_kq[ trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) ] )
+            cells.InsertCellPoint( pts.InsertNextPoint( (1-u)*on_plane[0] + u*on_mesh[0], (1-u)*on_plane[1] + u*on_mesh[1], (1-u)*on_plane[2] + u*on_mesh[2] ) )
+    folding.SetPoints( pts )
+    folding.SetPolys( cells )
+    foldingScalars = vtk.vtkIntArray()
+    for i in range(24):
+        foldingScalars.InsertNextValue( i )
+    folding.GetCellData().SetScalars( foldingScalars )
+    foldingMapper = vtk.vtkPolyDataMapper()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        foldingMapper.SetInputData( folding )
+    else:
+        foldingMapper.SetInput( folding )
+    foldingMapper.SetLookupTable(lut)
+    foldingMapper.SetScalarModeToUseCellData()
+    foldingMapper.SetScalarRange(0,24)
+    foldingActor = vtk.vtkActor()
+    foldingActor.SetMapper( foldingMapper )
+    foldingActor.GetProperty().EdgeVisibilityOn()
+    foldingActor.GetProperty().SetAmbient(1)
+    foldingActor.GetProperty().SetDiffuse(0)
+    ren.AddActor( foldingActor )
 
 draw_petrie_polygons = False
 if draw_petrie_polygons:
