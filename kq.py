@@ -365,40 +365,37 @@ if draw_lines:
     actor.GetProperty().SetColor(0,0,0)
     ren.AddActor(actor)
 
-draw_folding = False
-if draw_folding:
-    folding = vtk.vtkPolyData()
-    pts = vtk.vtkPoints()
-    cells = vtk.vtkCellArray()
-    u = 0.05
-    for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
-        if iPlanePoly >= len( plane_ids ) or plane_ids[ iPlanePoly ] >= 24:
-            continue
-        cells.InsertNextCell( 7 )
-        for iPt in range( 7 ):
-            on_plane = trans.GetOutput().GetPoint( trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) )
-            on_mesh = surface.GetPoint( plane_to_kq[ trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) ] )
-            cells.InsertCellPoint( pts.InsertNextPoint( (1-u)*on_plane[0] + u*on_mesh[0], (1-u)*on_plane[1] + u*on_mesh[1], (1-u)*on_plane[2] + u*on_mesh[2] ) )
-    folding.SetPoints( pts )
-    folding.SetPolys( cells )
-    foldingScalars = vtk.vtkIntArray()
-    for i in range(24):
-        foldingScalars.InsertNextValue( i )
-    folding.GetCellData().SetScalars( foldingScalars )
-    foldingMapper = vtk.vtkPolyDataMapper()
-    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-        foldingMapper.SetInputData( folding )
-    else:
-        foldingMapper.SetInput( folding )
-    foldingMapper.SetLookupTable(lut)
-    foldingMapper.SetScalarModeToUseCellData()
-    foldingMapper.SetScalarRange(0,24)
-    foldingActor = vtk.vtkActor()
-    foldingActor.SetMapper( foldingMapper )
-    foldingActor.GetProperty().EdgeVisibilityOn()
-    foldingActor.GetProperty().SetAmbient(1)
-    foldingActor.GetProperty().SetDiffuse(0)
-    ren.AddActor( foldingActor )
+folding = vtk.vtkPolyData()
+pts = vtk.vtkPoints()
+cells = vtk.vtkCellArray()
+u = 0.05
+foldingScalars = vtk.vtkIntArray()
+for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
+    if iPlanePoly >= len( plane_ids ) or plane_ids[ iPlanePoly ] >= 24:
+        continue
+    cells.InsertNextCell( 7 )
+    for iPt in range( 7 ):
+        on_plane = trans.GetOutput().GetPoint( trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) )
+        on_mesh = surface.GetPoint( plane_to_kq[ trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) ] )
+        cells.InsertCellPoint( pts.InsertNextPoint( (1-u)*on_plane[0] + u*on_mesh[0], (1-u)*on_plane[1] + u*on_mesh[1], (1-u)*on_plane[2] + u*on_mesh[2] ) )
+    foldingScalars.InsertNextValue( plane_ids[ iPlanePoly ] )
+folding.SetPoints( pts )
+folding.SetPolys( cells )
+folding.GetCellData().SetScalars( foldingScalars )
+foldingMapper = vtk.vtkPolyDataMapper()
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    foldingMapper.SetInputData( folding )
+else:
+    foldingMapper.SetInput( folding )
+foldingMapper.SetScalarRange(0,24)
+foldingMapper.SetLookupTable(lut)
+foldingMapper.SetScalarModeToUseCellData()
+foldingActor = vtk.vtkActor()
+foldingActor.SetMapper( foldingMapper )
+foldingActor.GetProperty().EdgeVisibilityOn()
+foldingActor.GetProperty().SetAmbient(1)
+foldingActor.GetProperty().SetDiffuse(0)
+ren.AddActor( foldingActor )
 
 draw_petrie_polygons = False
 if draw_petrie_polygons:
@@ -454,5 +451,26 @@ if render_orbit:
         wif.Modified()
         renWin.Render()
         png.Write()
+        
+animate_folding = True
+if animate_folding:
+    N = 300
+    iRot = 0
+    for iFrame in ( range(N) + range(N)[::-1] ) * 3:
+        theta = 0.1 * iRot * 2 * math.pi / N
+        iRot = iRot + 1
+        u = iFrame / float(N)
+        iFoldingPt = 0
+        for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
+            if iPlanePoly >= len( plane_ids ) or plane_ids[ iPlanePoly ] >= 24:
+                continue
+            for iPt in range( 7 ):
+                on_plane = trans.GetOutput().GetPoint( trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) )
+                on_mesh = surface.GetPoint( plane_to_kq[ trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) ] )
+                pts.SetPoint( iFoldingPt, (1-u)*on_plane[0] + u*on_mesh[0], (1-u)*on_plane[1] + u*on_mesh[1], (1-u)*on_plane[2] + u*on_mesh[2] )
+                iFoldingPt = iFoldingPt + 1
+        ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
+        folding.Modified()
+        renWin.Render()
 
 iren.Start()
