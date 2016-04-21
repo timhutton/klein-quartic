@@ -468,7 +468,7 @@ animate_folding = True
 if animate_folding:
     N = 300
     iRot = 0
-    for iFrame in ( range(N) + range(N)[::-1] ) * 1 + range(N):
+    for iFrame in ( range(N+1) + range(N+1)[::-1] ) * 1 + range(N+1):
         theta = 0.1 * iRot * 2 * math.pi / N
         iRot = iRot + 1
         u = iFrame / float(N)
