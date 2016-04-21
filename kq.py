@@ -172,7 +172,7 @@ lut.SetTableValue( 24, 1, 1, 1 )
 
 label_faces = False
 
-draw_surface = True
+draw_surface = False
 if draw_surface:
     surfaceMapper = vtk.vtkPolyDataMapper()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
@@ -252,7 +252,7 @@ else:
     trans.SetInput(plane)
 trans.Update()
 
-draw_plane = True
+draw_plane = False
 if draw_plane:
     plane_scalars = vtk.vtkIntArray()
     plane_scalars.SetNumberOfValues( trans.GetOutput().GetNumberOfPolys() )
@@ -373,12 +373,18 @@ foldingScalars = vtk.vtkIntArray()
 for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
     if iPlanePoly >= len( plane_ids ) or plane_ids[ iPlanePoly ] >= 24:
         continue
-    cells.InsertNextCell( 7 )
     for iPt in range( 7 ):
         on_plane = trans.GetOutput().GetPoint( trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) )
         on_mesh = surface.GetPoint( plane_to_kq[ trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) ] )
-        cells.InsertCellPoint( pts.InsertNextPoint( (1-u)*on_plane[0] + u*on_mesh[0], (1-u)*on_plane[1] + u*on_mesh[1], (1-u)*on_plane[2] + u*on_mesh[2] ) )
-    foldingScalars.InsertNextValue( plane_ids[ iPlanePoly ] )
+        pts.InsertNextPoint( (1-u)*on_plane[0] + u*on_mesh[0], (1-u)*on_plane[1] + u*on_mesh[1], (1-u)*on_plane[2] + u*on_mesh[2] )
+    for iCell in range( surface.GetNumberOfPolys() ):
+        # TODO: This is wrong. For each surface heptagon, find the reverse mapping from its point ids to those on the folding mesh,
+        #       then can apply the triangulation from surface so the morph works 
+        cells.InsertNextCell(3)
+        cells.InsertCellPoint( surface.GetCell(iCell).GetPointId( 0 ) )
+        cells.InsertCellPoint( surface.GetCell(iCell).GetPointId( 1 ) )
+        cells.InsertCellPoint( surface.GetCell(iCell).GetPointId( 2 ) )
+        foldingScalars.InsertNextValue( plane_ids[ iPlanePoly ] )
 folding.SetPoints( pts )
 folding.SetPolys( cells )
 folding.GetCellData().SetScalars( foldingScalars )
@@ -393,8 +399,8 @@ foldingMapper.SetScalarModeToUseCellData()
 foldingActor = vtk.vtkActor()
 foldingActor.SetMapper( foldingMapper )
 foldingActor.GetProperty().EdgeVisibilityOn()
-foldingActor.GetProperty().SetAmbient(1)
-foldingActor.GetProperty().SetDiffuse(0)
+#foldingActor.GetProperty().SetAmbient(1)
+#foldingActor.GetProperty().SetDiffuse(0)
 ren.AddActor( foldingActor )
 
 draw_petrie_polygons = False
@@ -431,10 +437,10 @@ if draw_petrie_polygons:
 
 iren.Initialize()
  
-ren.ResetCamera()
 ren.GetActiveCamera().Zoom(1.5)
 ren.GetActiveCamera().SetPosition(0,-6,3)
 ren.GetActiveCamera().SetViewUp(0,0,1)
+ren.ResetCameraClippingRange()
 renWin.Render()
 
 render_orbit = False
@@ -456,7 +462,7 @@ animate_folding = True
 if animate_folding:
     N = 300
     iRot = 0
-    for iFrame in ( range(N) + range(N)[::-1] ) * 3:
+    for iFrame in ( range(N) + range(N)[::-1] ) * 1 + range(N):
         theta = 0.1 * iRot * 2 * math.pi / N
         iRot = iRot + 1
         u = iFrame / float(N)
