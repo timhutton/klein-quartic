@@ -206,7 +206,7 @@ if draw_surface:
         kq_labels_actor.SetMapper(kq_labels)
         ren.AddActor(kq_labels_actor)
 
-draw_edges = True
+draw_edges = False
 if draw_edges:
     lines = vtk.vtkExtractEdges()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
@@ -467,11 +467,11 @@ if render_orbit:
 animate_folding = True
 if animate_folding:
     N = 300
-    iRot = 0
-    for iFrame in ( range(N+1) + range(N+1)[::-1] ) * 1 + range(N+1):
-        theta = 0.1 * iRot * 2 * math.pi / N
-        iRot = iRot + 1
-        u = iFrame / float(N)
+    iFrame = 0
+    for iFold in ( range(N+1) + range(N+1)[::-1] ) * 3 + range(N+1):
+        theta = 0.1 * iFrame * 2 * math.pi / N
+        iFrame = iFrame + 1
+        u = iFold / float(N)
         iFoldingPt = 0
         for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
             if iPlanePoly >= len( plane_ids ) or plane_ids[ iPlanePoly ] >= 24:
@@ -482,6 +482,7 @@ if animate_folding:
                 pts.SetPoint( iFoldingPt, (1-u)*on_plane[0] + u*on_mesh[0], (1-u)*on_plane[1] + u*on_mesh[1], (1-u)*on_plane[2] + u*on_mesh[2] )
                 iFoldingPt = iFoldingPt + 1
         ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
+        ren.ResetCameraClippingRange()
         folding.Modified()
         renWin.Render()
 
