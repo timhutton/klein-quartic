@@ -428,6 +428,7 @@ if show_boundary:
         boundary_tube.SetInput( boundary )
     boundary_tube.SetRadius(0.007)
     boundary_tube.SetNumberOfSides(20)
+    boundary_tube.CappingOn()
     boundary_tubeMapper = vtk.vtkPolyDataMapper()
     boundary_tubeMapper.SetInputConnection( boundary_tube.GetOutputPort() )
     boundary_tubeActor = vtk.vtkActor()
