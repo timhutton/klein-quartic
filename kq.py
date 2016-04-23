@@ -136,6 +136,10 @@ track = vtk.vtkInteractorStyleTrackballCamera()
 iren.SetInteractorStyle(track)
 ren.SetBackground(0.95, 0.9, 0.85)
 renWin.SetSize(800, 600)
+#renWin.SetSize(1280, 720)
+
+lights = vtk.vtkLightKit()
+lights.AddLightsToRenderer( ren )
   
 surface = makePolyData( all_verts, faces_as_tris )
 edges = makePolyData( all_verts, outer_faces + inner_faces )
@@ -240,6 +244,7 @@ if draw_edges:
     ren.AddActor(tubeActor)
 
 plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
+#plane = getDual( getHyperbolicPlaneTiling( 3, 7, 12 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 
 plane_trans = vtk.vtkTransform()
 plane_trans.Translate(all_verts[0])
@@ -365,6 +370,8 @@ if draw_lines:
     actor.GetProperty().SetColor(0,0,0)
     ren.AddActor(actor)
 
+folding_pts_on_plane = vtk.vtkPoints()
+folding_pts_on_surface = vtk.vtkPoints()
 folding = vtk.vtkPolyData()
 pts = vtk.vtkPoints()
 cells = vtk.vtkCellArray()
@@ -380,9 +387,13 @@ for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
         on_plane = trans.GetOutput().GetPoint( iPtOnPlane )
         on_mesh = surface.GetPoint( iPtOnSurface )
         iPtOnFolding = pts.InsertNextPoint( (1-u)*on_plane[0] + u*on_mesh[0], (1-u)*on_plane[1] + u*on_mesh[1], (1-u)*on_plane[2] + u*on_mesh[2] )
+        folding_pts_on_plane.InsertNextPoint( on_plane )
+        folding_pts_on_surface.InsertNextPoint( on_mesh )
         plane_to_folding[ int( iPtOnPlane ) ] = iPtOnFolding
 for iSurfacePoly in range( surface.GetNumberOfPolys() ):
     face_label = surface.GetCellData().GetScalars().GetTuple1( iSurfacePoly )
+    #if face_label > 5:
+    #    continue
     iPlanePoly = [ i for i in range( trans.GetOutput().GetNumberOfPolys() ) if trans.GetOutput().GetCellData().GetScalars().GetTuple1( i ) == face_label ][0]
     cells.InsertNextCell(3)
     for iiPt in range(3):
@@ -446,6 +457,7 @@ iren.Initialize()
 ren.GetActiveCamera().Zoom(1.5)
 ren.GetActiveCamera().SetPosition(0,-6,3)
 ren.GetActiveCamera().SetViewUp(0,0,1)
+ren.GetActiveCamera().SetFocalPoint(0,0,-0.5)
 ren.ResetCameraClippingRange()
 renWin.Render()
 
@@ -465,25 +477,28 @@ if render_orbit:
         png.Write()
         
 animate_folding = True
+save_folding = False
 if animate_folding:
     N = 300
     iFrame = 0
-    for iFold in range(N+1):
+    wif = vtk.vtkWindowToImageFilter()
+    wif.SetInput(renWin)
+    png = vtk.vtkPNGWriter()
+    png.SetInputConnection(wif.GetOutputPort())
+    sequence = (range(N+1) + range(N+1)[::-1])*1 + range(N+1) + [N]*3*N
+    for iFold in sequence:
         theta = 0.1 * iFrame * 2 * math.pi / N
         iFrame = iFrame + 1
         u = iFold / float(N)
-        iFoldingPt = 0
-        for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
-            if iPlanePoly >= len( plane_ids ) or plane_ids[ iPlanePoly ] >= 24:
-                continue
-            for iPt in range( 7 ):
-                on_plane = trans.GetOutput().GetPoint( trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) )
-                on_mesh = surface.GetPoint( plane_to_kq[ trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt ) ] )
-                pts.SetPoint( iFoldingPt, (1-u)*on_plane[0] + u*on_mesh[0], (1-u)*on_plane[1] + u*on_mesh[1], (1-u)*on_plane[2] + u*on_mesh[2] )
-                iFoldingPt = iFoldingPt + 1
+        for iFoldingPoint in range( folding.GetPoints().GetNumberOfPoints() ):
+            folding.GetPoints().SetPoint( iFoldingPoint, *lerp( folding_pts_on_plane.GetPoint( iFoldingPoint ), folding_pts_on_surface.GetPoint( iFoldingPoint ), u ) )
         ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
         ren.ResetCameraClippingRange()
+        png.SetFileName("test"+str(iFrame).zfill(4)+".png")
         folding.Modified()
+        wif.Modified()
         renWin.Render()
+        if save_folding:
+            png.Write()
 
 iren.Start()
