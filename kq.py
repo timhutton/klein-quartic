@@ -297,32 +297,6 @@ if draw_plane:
         plane_labels_actor.SetMapper(plane_labels)
         ren.AddActor(plane_labels_actor)
 
-label_points = False
-if label_points:
-    for pdc in [ trans.GetOutput(), surface ] if draw_plane else [ surface ]:
-        pd = vtk.vtkPolyData()
-        pd.ShallowCopy(pdc)
-        pointData = vtk.vtkFloatArray()
-        for val in range(pd.GetNumberOfPoints()):
-            pointData.InsertNextValue( val )
-        pd.GetPointData().SetScalars( pointData )
-        visible_only = vtk.vtkSelectVisiblePoints()
-        if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-            visible_only.SetInputData( pd )
-        else:
-            visible_only.SetInput( pd )
-        visible_only.SetRenderer(ren)
-        labels = vtk.vtkLabeledDataMapper()
-        labels.SetInputConnection(visible_only.GetOutputPort())
-        labels.SetLabelFormat("%.0f")
-        labels.GetLabelTextProperty().SetFontSize(16)
-        labels.GetLabelTextProperty().SetJustificationToCentered()
-        labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
-        labels.SetLabelModeToLabelScalars()
-        labels_actor = vtk.vtkActor2D()
-        labels_actor.SetMapper(labels)
-        ren.AddActor(labels_actor)
-    
 # output the plane as OBJ
 verts = []
 for i in range(plane.GetNumberOfPoints()):
@@ -372,10 +346,12 @@ if draw_lines:
 
 folding_pts_on_plane = vtk.vtkPoints()
 folding_pts_on_surface = vtk.vtkPoints()
+folding_on_surface = vtk.vtkPolyData()
+folding_on_plane = vtk.vtkPolyData()
 folding = vtk.vtkPolyData()
 pts = vtk.vtkPoints()
 cells = vtk.vtkCellArray()
-u = 0.05
+u = 0.0
 foldingScalars = vtk.vtkIntArray()
 plane_to_folding = {}
 for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
@@ -404,6 +380,15 @@ for iSurfacePoly in range( surface.GetNumberOfPolys() ):
     foldingScalars.InsertNextValue( plane_ids[ iPlanePoly ] )
 folding.SetPoints( pts )
 folding.SetPolys( cells )
+folding_on_plane.SetPoints( folding_pts_on_plane )
+folding_on_surface.SetPoints( folding_pts_on_surface )
+folding_on_plane_cells = vtk.vtkCellArray();
+folding_on_plane_cells.DeepCopy( cells )
+folding_on_plane.SetPolys( folding_on_plane_cells )
+folding_on_surface_cells = vtk.vtkCellArray();
+folding_on_surface_cells.DeepCopy( cells )
+folding_on_surface.SetPolys( folding_on_surface_cells )
+
 folding.GetCellData().SetScalars( foldingScalars )
 foldingMapper = vtk.vtkPolyDataMapper()
 if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
@@ -420,6 +405,62 @@ foldingActor.SetMapper( foldingMapper )
 #foldingActor.GetProperty().SetDiffuse(0)
 ren.AddActor( foldingActor )
 
+show_boundary = True
+boundary = vtk.vtkPolyData()
+if show_boundary:
+    folding_boundary = [ 51,37,126,132,131,130,129,128,94,95,96,97,66,67,114,115,116,117,
+                         138,137,136,135,134,80,79,78,141,142,143,144,145,146,122,123,124,
+                         125,46,45,86,87,88,167,166,165,164,163,162,60,61,62,154,160,
+                         159,158,157,156,109,108,107,106,74,73,72,103,102,101,149,
+                         150,151,152,153,52 ]
+    boundary_cells = vtk.vtkCellArray()
+    for i in range(len(folding_boundary)):
+        poly_line = vtk.vtkPolyLine()
+        poly_line.GetPointIds().InsertNextId( folding_boundary[i] )
+        poly_line.GetPointIds().InsertNextId( folding_boundary[(i+1)%len(folding_boundary)] )
+        boundary_cells.InsertNextCell( poly_line )
+    boundary.SetPoints( folding.GetPoints() )
+    boundary.SetLines( boundary_cells )    
+    boundary_tube = vtk.vtkTubeFilter()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        boundary_tube.SetInputData( boundary )
+    else:
+        boundary_tube.SetInput( boundary )
+    boundary_tube.SetRadius(0.007)
+    boundary_tube.SetNumberOfSides(20)
+    boundary_tubeMapper = vtk.vtkPolyDataMapper()
+    boundary_tubeMapper.SetInputConnection( boundary_tube.GetOutputPort() )
+    boundary_tubeActor = vtk.vtkActor()
+    boundary_tubeActor.SetMapper( boundary_tubeMapper )
+    boundary_tubeActor.GetProperty().SetColor(0,0,0)
+    ren.AddActor( boundary_tubeActor )
+
+label_points = False
+if label_points:
+    for pdc in [ trans.GetOutput(), surface ] if draw_plane else [ surface ]:
+        pd = vtk.vtkPolyData()
+        pd.ShallowCopy(pdc)
+        pointData = vtk.vtkFloatArray()
+        for val in range(pd.GetNumberOfPoints()):
+            pointData.InsertNextValue( val )
+        pd.GetPointData().SetScalars( pointData )
+        visible_only = vtk.vtkSelectVisiblePoints()
+        if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+            visible_only.SetInputData( pd )
+        else:
+            visible_only.SetInput( pd )
+        visible_only.SetRenderer(ren)
+        labels = vtk.vtkLabeledDataMapper()
+        labels.SetInputConnection(visible_only.GetOutputPort())
+        labels.SetLabelFormat("%.0f")
+        labels.GetLabelTextProperty().SetFontSize(16)
+        labels.GetLabelTextProperty().SetJustificationToCentered()
+        labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
+        labels.SetLabelModeToLabelScalars()
+        labels_actor = vtk.vtkActor2D()
+        labels_actor.SetMapper(labels)
+        ren.AddActor(labels_actor)
+    
 draw_petrie_polygons = False
 if draw_petrie_polygons:
     for ipp,pp in enumerate(petrie_polygons):
@@ -491,11 +532,12 @@ if animate_folding:
         iFrame = iFrame + 1
         u = iFold / float(N)
         for iFoldingPoint in range( folding.GetPoints().GetNumberOfPoints() ):
-            folding.GetPoints().SetPoint( iFoldingPoint, *lerp( folding_pts_on_plane.GetPoint( iFoldingPoint ), folding_pts_on_surface.GetPoint( iFoldingPoint ), u ) )
+            folding.GetPoints().SetPoint( iFoldingPoint, easing_interp( folding_on_plane.GetPoint( iFoldingPoint ), folding_on_surface.GetPoint( iFoldingPoint ), u ) )
         ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
         ren.ResetCameraClippingRange()
         png.SetFileName("test"+str(iFrame).zfill(4)+".png")
         folding.Modified()
+        boundary.Modified()
         wif.Modified()
         renWin.Render()
         if save_folding:
