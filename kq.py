@@ -351,7 +351,8 @@ folding_on_plane = vtk.vtkPolyData()
 folding = vtk.vtkPolyData()
 pts = vtk.vtkPoints()
 cells = vtk.vtkCellArray()
-u = 0.0
+folding_pts_locator = vtk.vtkPointLocator()
+folding_pts_locator.InitPointInsertion( pts, [-10,10,-10,10,-10,10] )
 foldingScalars = vtk.vtkIntArray()
 plane_to_folding = {}
 for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
@@ -362,9 +363,11 @@ for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
         iPtOnSurface = plane_to_kq[ iPtOnPlane ]
         on_plane = trans.GetOutput().GetPoint( iPtOnPlane )
         on_mesh = surface.GetPoint( iPtOnSurface )
-        iPtOnFolding = pts.InsertNextPoint( (1-u)*on_plane[0] + u*on_mesh[0], (1-u)*on_plane[1] + u*on_mesh[1], (1-u)*on_plane[2] + u*on_mesh[2] )
-        folding_pts_on_plane.InsertNextPoint( on_plane )
-        folding_pts_on_surface.InsertNextPoint( on_mesh )
+        iPtOnFolding = folding_pts_locator.IsInsertedPoint( on_plane )
+        if iPtOnFolding == -1:
+            iPtOnFolding = folding_pts_locator.InsertNextPoint( on_plane )
+            folding_pts_on_plane.InsertNextPoint( on_plane )
+            folding_pts_on_surface.InsertNextPoint( on_mesh )
         plane_to_folding[ int( iPtOnPlane ) ] = iPtOnFolding
 for iSurfacePoly in range( surface.GetNumberOfPolys() ):
     face_label = surface.GetCellData().GetScalars().GetTuple1( iSurfacePoly )
@@ -408,29 +411,20 @@ ren.AddActor( foldingActor )
 show_boundary = True
 boundary = vtk.vtkPolyData()
 if show_boundary:
-    folding_boundary = [ 51,37,126,132,131,130,129,128,94,95,96,97,66,67,114,115,116,117,
-                         138,137,136,135,134,80,79,78,141,142,143,144,145,146,122,123,124,
-                         125,46,45,86,87,88,167,166,165,164,163,162,60,61,62,154,160,
-                         159,158,157,156,109,108,107,106,74,73,72,103,102,101,149,
-                         150,151,152,153,52 ]
-    boundary_cells = vtk.vtkCellArray()
-    for i in range(len(folding_boundary)):
-        poly_line = vtk.vtkPolyLine()
-        poly_line.GetPointIds().InsertNextId( folding_boundary[i] )
-        poly_line.GetPointIds().InsertNextId( folding_boundary[(i+1)%len(folding_boundary)] )
-        boundary_cells.InsertNextCell( poly_line )
-    boundary.SetPoints( folding.GetPoints() )
-    boundary.SetLines( boundary_cells )    
-    boundary_tube = vtk.vtkTubeFilter()
+    boundary_extractor = vtk.vtkFeatureEdges()
+    boundary_extractor.FeatureEdgesOff()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-        boundary_tube.SetInputData( boundary )
+        boundary_extractor.SetInputData( folding )
     else:
-        boundary_tube.SetInput( boundary )
+        boundary_extractor.SetInput( folding )
+    boundary_tube = vtk.vtkTubeFilter()
+    boundary_tube.SetInputConnection( boundary_extractor.GetOutputPort() )
     boundary_tube.SetRadius(0.007)
     boundary_tube.SetNumberOfSides(20)
     boundary_tube.CappingOn()
     boundary_tubeMapper = vtk.vtkPolyDataMapper()
     boundary_tubeMapper.SetInputConnection( boundary_tube.GetOutputPort() )
+    boundary_tubeMapper.ScalarVisibilityOff()
     boundary_tubeActor = vtk.vtkActor()
     boundary_tubeActor.SetMapper( boundary_tubeMapper )
     boundary_tubeActor.GetProperty().SetColor(0,0,0)
