@@ -432,7 +432,10 @@ if show_boundary:
 
 label_points = False
 if label_points:
-    for pdc in [ trans.GetOutput(), surface ] if draw_plane else [ surface ]:
+    sources = [ folding ]
+    if draw_plane: sources.append( trans.GetOutput() )
+    if draw_surface: sources.append( surface )
+    for pdc in sources:
         pd = vtk.vtkPolyData()
         pd.ShallowCopy(pdc)
         pointData = vtk.vtkFloatArray()
