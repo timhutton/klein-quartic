@@ -149,7 +149,8 @@ plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14
 outer_or_inner_type = [ 0,0,0,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0 ]
 tetrahedron_corner_type = [ 0,0,0,2,1,3,1,3,2,1,3,2,0,0,0,1,3,2,1,3,2,1,3,2 ]
 three_colors_type = [ 1,0,2,0,2,1,0,2,1,2,1,0,1,0,2,0,2,1,0,2,1,2,1,0 ]
-papercraft_type     = [ 0,1,2,1,0,1,2,3,1,2,3,0,0,2,1,3,2,3,0,1,0,3,2,3 ] # printing 3 inner and 3 outer on 4 sheets of different card
+eight_coloring = [ 0, 1, 2, 3, 4, 5, 6, 6, 6, 7, 7, 7, 4, 5, 3, 5, 3, 4, 2, 0, 1, 0, 1, 2 ] # thanks to Niles Johnson
+papercraft_type = [ 0,1,2,1,0,1,2,3,1,2,3,0,0,2,1,3,2,3,0,1,0,3,2,3 ] # printing 3 inner and 3 outer on 4 sheets of different card
 affinity_groups_type = [ 2,0,1,2,0,1,0,1,2,2,0,1,2,0,1,2,0,1,0,1,2,0,1,2 ]
 petrie_polygons = [ [3,45,44,5,9,10,30,29],[54,55,48,49,50,51,52,53],[22,23,35,34,46,47,27,26] ]
 
@@ -159,17 +160,18 @@ for val in cellIds:
     surfaceCellData.InsertNextValue( val )
 surface.GetCellData().SetScalars( surfaceCellData )
 
-type_colors = [ (1,0.4,0.4,1), (0.4,0.4,1,1), (0.4,1,0.4,1), (1,1,0.4,1) ]
+type_colors = [ (1,0.4,0.4,1), (0.4,0.4,1,1), (0.4,1,0.4,1), (1,1,0.4,1), (1,0.4,1,1), (0.4,1,1,1), (1,0.5,0,1), (0.6,0.6,0.6,1) ]
 lut = vtk.vtkLookupTable()
 lut.SetNumberOfTableValues(25)
 lut.Build()
 for i in range(24):
     random_color = vtk.vtkMath.HSVToRGB( random.random(), random.uniform(0.5,1), random.uniform(0.7,1) ) + (1,)
     # You can choose the coloring you want here:
-    lut.SetTableValue( i, random_color )
+    #lut.SetTableValue( i, random_color )
     #lut.SetTableValue( i, type_colors[ outer_or_inner_type[ i ] ] )
     #lut.SetTableValue( i, type_colors[ tetrahedron_corner_type[ i ] ] )
     #lut.SetTableValue( i, type_colors[ three_colors_type[ i ] ] )
+    lut.SetTableValue( i, type_colors[ eight_coloring[ i ] ] )
     #lut.SetTableValue( i, type_colors[ papercraft_type[ i ] ] )
     #lut.SetTableValue( i, type_colors[ affinity_groups_type[ i ] ] )
 lut.SetTableValue( 24, 1, 1, 1 )
