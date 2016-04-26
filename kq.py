@@ -306,6 +306,8 @@ if draw_lines:
     actor.SetMapper(mapper)
     actor.GetProperty().SetColor(0,0,0)
     ren.AddActor(actor)
+    
+show_faces = [ 0,8,20,23 ] # the backbone of the folding we think would be clearest
 
 folding_pts_on_plane = vtk.vtkPoints()
 folding_pts_on_surface = vtk.vtkPoints()
@@ -334,7 +336,7 @@ for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
         plane_to_folding[ int( iPtOnPlane ) ] = iPtOnFolding
 for iSurfacePoly in range( surface.GetNumberOfPolys() ):
     face_label = surface.GetCellData().GetScalars().GetTuple1( iSurfacePoly )
-    #if face_label > 5:
+    #if not face_label in show_faces:
     #    continue
     iPlanePoly = [ i for i in range( trans.GetOutput().GetNumberOfPolys() ) if trans.GetOutput().GetCellData().GetScalars().GetTuple1( i ) == face_label ][0]
     cells.InsertNextCell(3)
