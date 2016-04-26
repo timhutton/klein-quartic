@@ -325,14 +325,12 @@ for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
         continue
     for iPt in range( 7 ):
         iPtOnPlane = trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt )
-        iPtOnSurface = plane_to_kq[ iPtOnPlane ]
         on_plane = trans.GetOutput().GetPoint( iPtOnPlane )
-        on_mesh = surface.GetPoint( iPtOnSurface )
         iPtOnFolding = folding_pts_locator.IsInsertedPoint( on_plane )
         if iPtOnFolding == -1:
             iPtOnFolding = folding_pts_locator.InsertNextPoint( on_plane )
             folding_pts_on_plane.InsertNextPoint( on_plane )
-            folding_pts_on_surface.InsertNextPoint( on_mesh )
+            folding_pts_on_surface.InsertNextPoint( surface.GetPoint( plane_to_kq[ iPtOnPlane ] ) )
         plane_to_folding[ int( iPtOnPlane ) ] = iPtOnFolding
 for iSurfacePoly in range( surface.GetNumberOfPolys() ):
     face_label = surface.GetCellData().GetScalars().GetTuple1( iSurfacePoly )
@@ -369,8 +367,6 @@ foldingMapper.SetScalarModeToUseCellData()
 foldingActor = vtk.vtkActor()
 foldingActor.SetMapper( foldingMapper )
 #foldingActor.GetProperty().EdgeVisibilityOn()
-#foldingActor.GetProperty().SetAmbient(1)
-#foldingActor.GetProperty().SetDiffuse(0)
 ren.AddActor( foldingActor )
 
 show_boundary = True
