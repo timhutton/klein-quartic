@@ -154,7 +154,7 @@ affinity_groups_type = [ 2,0,1,2,0,1,0,1,2,2,0,1,2,0,1,2,0,1,0,1,2,0,1,2 ]
 petrie_polygons = [ [3,45,44,5,9,10,30,29],[54,55,48,49,50,51,52,53],[22,23,35,34,46,47,27,26] ]
 
 cellIds = flatten( [i]*5 for i in kq_ids ) # each of the 24 heptagons is made of 5 triangles
-surfaceCellData = vtk.vtkFloatArray()
+surfaceCellData = vtk.vtkIntArray()
 for val in cellIds:
     surfaceCellData.InsertNextValue( val )
 surface.GetCellData().SetScalars( surfaceCellData )
@@ -174,8 +174,6 @@ for i in range(24):
     #lut.SetTableValue( i, type_colors[ affinity_groups_type[ i ] ] )
 lut.SetTableValue( 24, 1, 1, 1 )
 
-label_faces = False
-
 draw_surface = False
 if draw_surface:
     surfaceMapper = vtk.vtkPolyDataMapper()
@@ -190,25 +188,6 @@ if draw_surface:
     surfaceActor.SetMapper(surfaceMapper)
     #surfaceActor.GetProperty().SetOpacity(0.7)
     ren.AddActor(surfaceActor)
-    
-    if label_faces:
-        kq_cell_centers = vtk.vtkCellCenters()
-        if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-            kq_cell_centers.SetInputData(surface)
-        else:
-            kq_cell_centers.SetInput(surface)
-        kq_visible_only = vtk.vtkSelectVisiblePoints()
-        kq_visible_only.SetRenderer(ren)
-        kq_visible_only.SetInputConnection(kq_cell_centers.GetOutputPort())
-        kq_labels = vtk.vtkLabeledDataMapper()
-        kq_labels.SetInputConnection(kq_visible_only.GetOutputPort())
-        kq_labels.SetLabelModeToLabelScalars()
-        kq_labels.SetLabelFormat("%.0f")
-        kq_labels.GetLabelTextProperty().SetJustificationToCentered()
-        kq_labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
-        kq_labels_actor = vtk.vtkActor2D()
-        kq_labels_actor.SetMapper(kq_labels)
-        ren.AddActor(kq_labels_actor)
 
 draw_edges = False
 if draw_edges:
@@ -280,22 +259,6 @@ if draw_plane:
     planeActor.GetProperty().SetAmbient(1)
     planeActor.GetProperty().SetDiffuse(0)
     ren.AddActor(planeActor)
-
-    if label_faces:
-        cell_centers = vtk.vtkCellCenters()
-        if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-            cell_centers.SetInputData( trans.GetOutput() )
-        else:
-            cell_centers.SetInput( trans.GetOutput() )
-        plane_labels_visible_only = vtk.vtkSelectVisiblePoints()
-        plane_labels_visible_only.SetRenderer(ren)
-        plane_labels_visible_only.SetInputConnection(cell_centers.GetOutputPort())
-        plane_labels = vtk.vtkLabeledDataMapper()
-        plane_labels.SetLabelModeToLabelScalars()
-        plane_labels.SetInputConnection(plane_labels_visible_only.GetOutputPort())
-        plane_labels_actor = vtk.vtkActor2D()
-        plane_labels_actor.SetMapper(plane_labels)
-        ren.AddActor(plane_labels_actor)
 
 # output the plane as OBJ
 verts = []
@@ -430,6 +393,29 @@ if show_boundary:
     boundary_tubeActor.GetProperty().SetColor(0,0,0)
     ren.AddActor( boundary_tubeActor )
 
+label_faces = False
+if label_faces:
+    sources = [ folding ]
+    if draw_plane: sources.append( trans.GetOutput() )
+    if draw_surface: sources.append( surface )
+    for source in sources:
+        cell_centers = vtk.vtkCellCenters()
+        if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+            cell_centers.SetInputData( source )
+        else:
+            cell_centers.SetInput( source )
+        visible_only = vtk.vtkSelectVisiblePoints()
+        visible_only.SetRenderer(ren)
+        visible_only.SetInputConnection( cell_centers.GetOutputPort() )
+        labels = vtk.vtkLabeledDataMapper()
+        labels.SetInputConnection( visible_only.GetOutputPort() )
+        labels.SetLabelModeToLabelScalars()
+        labels.GetLabelTextProperty().SetJustificationToCentered()
+        labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
+        labels_actor = vtk.vtkActor2D()
+        labels_actor.SetMapper( labels )
+        ren.AddActor( labels_actor )
+
 label_points = False
 if label_points:
     sources = [ folding ]
@@ -438,7 +424,7 @@ if label_points:
     for pdc in sources:
         pd = vtk.vtkPolyData()
         pd.ShallowCopy(pdc)
-        pointData = vtk.vtkFloatArray()
+        pointData = vtk.vtkIntArray()
         for val in range(pd.GetNumberOfPoints()):
             pointData.InsertNextValue( val )
         pd.GetPointData().SetScalars( pointData )
@@ -450,7 +436,6 @@ if label_points:
         visible_only.SetRenderer(ren)
         labels = vtk.vtkLabeledDataMapper()
         labels.SetInputConnection(visible_only.GetOutputPort())
-        labels.SetLabelFormat("%.0f")
         labels.GetLabelTextProperty().SetFontSize(16)
         labels.GetLabelTextProperty().SetJustificationToCentered()
         labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
