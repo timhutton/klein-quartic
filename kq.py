@@ -145,7 +145,10 @@ surface = makePolyData( all_verts, faces_as_tris )
 edges = makePolyData( all_verts, outer_faces + inner_faces )
 
 kq_ids    = [ 1, 2, 0, 23, 20, 8, 22, 19, 7, 21, 18, 6, 12, 14, 13, 3, 17, 11, 5, 16, 10, 4, 15, 9 ]
-plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14, 16, 100, 20, 103, 21, 19, 104, 105, 106, 107, 108, 22, 18, 23 ]
+# original selection of plane faces to use: compact and three-way rotationally-symmetric
+#plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14, 16, 100, 20, 103, 21, 19, 104, 105, 106, 107, 108, 22, 18, 23 ]
+# new selection of plane faces to use: more amenable to folding since outer heptagons are laid flat as connected on the three trunks
+plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14, 16, 100, 110, 103, 21, 19, 104, 105, 23, 107, 108, 22, 18, 106, 107, 108, 109, 20 ]
 outer_or_inner_type = [ 0,0,0,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0 ]
 tetrahedron_corner_type = [ 0,0,0,2,1,3,1,3,2,1,3,2,0,0,0,1,3,2,1,3,2,1,3,2 ]
 three_colors_type = [ 1,0,2,0,2,1,0,2,1,2,1,0,1,0,2,0,2,1,0,2,1,2,1,0 ]
@@ -284,9 +287,9 @@ plane_to_kq = { 0:0,1:8,2:15,3:14,4:18,5:17,6:16,7:9,8:10,9:30,10:31,11:24,12:25
                 36:11,37:38,38:37,39:36,40:36,41:37,42:2,43:21,44:13,45:1,46:40,47:41,
                 48:41,49:40,50:47,51:27,52:28,53:4,54:12,55:46,56:45,57:44,58:5,
                 59:20,60:4,61:12,65:48,66:32,70:7,71:49,72:48,73:55,74:20,75:4,76:28,
-                77:39,78:32,79:33,80:6,84:45,85:47,86:40,87:1,92:46,93:45,94:3,95:29,
-                96:2,97:37,98:38,119:21,120:2,121:48,122:55,123:54,124:53,125:3,
-                126:39,127:32,128:1,129:13}
+                77:39,78:32,79:33,80:6,84:45,85:47,86:40,87:1,88:47,92:46,93:45,94:3,95:29,
+                96:2,97:37,98:38,107:32,108:39,109:38,110:11,119:21,120:2,121:48,122:55,123:54,124:53,125:3,
+                126:39,127:32,128:1,129:13,142:46,143:34,144:33}
 
 draw_lines = False
 if draw_lines:
@@ -309,67 +312,69 @@ if draw_lines:
     actor.GetProperty().SetColor(0,0,0)
     ren.AddActor(actor)
     
-show_faces = [ 0,8,20,23 ] # the backbone of the folding we think would be clearest
-
-folding_pts_on_plane = vtk.vtkPoints()
-folding_pts_on_surface = vtk.vtkPoints()
-folding_on_surface = vtk.vtkPolyData()
-folding_on_plane = vtk.vtkPolyData()
+draw_folding = True
 folding = vtk.vtkPolyData()
-pts = vtk.vtkPoints()
-cells = vtk.vtkCellArray()
-folding_pts_locator = vtk.vtkPointLocator()
-folding_pts_locator.InitPointInsertion( pts, [-10,10,-10,10,-10,10] )
-foldingScalars = vtk.vtkIntArray()
-plane_to_folding = {}
-for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
-    if iPlanePoly >= len( plane_ids ) or plane_ids[ iPlanePoly ] >= 24:
-        continue
-    for iPt in range( 7 ):
-        iPtOnPlane = trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt )
-        on_plane = trans.GetOutput().GetPoint( iPtOnPlane )
-        iPtOnFolding = folding_pts_locator.IsInsertedPoint( on_plane )
-        if iPtOnFolding == -1:
-            iPtOnFolding = folding_pts_locator.InsertNextPoint( on_plane )
-            folding_pts_on_plane.InsertNextPoint( on_plane )
-            folding_pts_on_surface.InsertNextPoint( surface.GetPoint( plane_to_kq[ iPtOnPlane ] ) )
-        plane_to_folding[ int( iPtOnPlane ) ] = iPtOnFolding
-for iSurfacePoly in range( surface.GetNumberOfPolys() ):
-    face_label = surface.GetCellData().GetScalars().GetTuple1( iSurfacePoly )
-    #if not face_label in show_faces:
-    #    continue
-    iPlanePoly = [ i for i in range( trans.GetOutput().GetNumberOfPolys() ) if trans.GetOutput().GetCellData().GetScalars().GetTuple1( i ) == face_label ][0]
-    cells.InsertNextCell(3)
-    for iiPt in range(3):
-        iSurfacePt = surface.GetCell( iSurfacePoly ).GetPointId( iiPt )
-        iiPlanePoint = [ i for i in range( 7 ) if plane_to_kq[ trans.GetOutput().GetCell( iPlanePoly ).GetPointId( i ) ] == iSurfacePt ][0]
-        iPlanePt = trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iiPlanePoint )
-        cells.InsertCellPoint( plane_to_folding[ iPlanePt ] )
-    foldingScalars.InsertNextValue( plane_ids[ iPlanePoly ] )
-folding.SetPoints( pts )
-folding.SetPolys( cells )
-folding_on_plane.SetPoints( folding_pts_on_plane )
-folding_on_surface.SetPoints( folding_pts_on_surface )
-folding_on_plane_cells = vtk.vtkCellArray();
-folding_on_plane_cells.DeepCopy( cells )
-folding_on_plane.SetPolys( folding_on_plane_cells )
-folding_on_surface_cells = vtk.vtkCellArray();
-folding_on_surface_cells.DeepCopy( cells )
-folding_on_surface.SetPolys( folding_on_surface_cells )
+if draw_folding:
+    show_faces = [ 0,8,20,23 ] # the backbone of the folding we think would be clearest
 
-folding.GetCellData().SetScalars( foldingScalars )
-foldingMapper = vtk.vtkPolyDataMapper()
-if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    foldingMapper.SetInputData( folding )
-else:
-    foldingMapper.SetInput( folding )
-foldingMapper.SetScalarRange(0,24)
-foldingMapper.SetLookupTable(lut)
-foldingMapper.SetScalarModeToUseCellData()
-foldingActor = vtk.vtkActor()
-foldingActor.SetMapper( foldingMapper )
-#foldingActor.GetProperty().EdgeVisibilityOn()
-ren.AddActor( foldingActor )
+    folding_pts_on_plane = vtk.vtkPoints()
+    folding_pts_on_surface = vtk.vtkPoints()
+    folding_on_surface = vtk.vtkPolyData()
+    folding_on_plane = vtk.vtkPolyData()
+    pts = vtk.vtkPoints()
+    cells = vtk.vtkCellArray()
+    folding_pts_locator = vtk.vtkPointLocator()
+    folding_pts_locator.InitPointInsertion( pts, [-10,10,-10,10,-10,10] )
+    foldingScalars = vtk.vtkIntArray()
+    plane_to_folding = {}
+    for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
+        if iPlanePoly >= len( plane_ids ) or plane_ids[ iPlanePoly ] >= 24:
+            continue
+        for iPt in range( 7 ):
+            iPtOnPlane = trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt )
+            on_plane = trans.GetOutput().GetPoint( iPtOnPlane )
+            iPtOnFolding = folding_pts_locator.IsInsertedPoint( on_plane )
+            if iPtOnFolding == -1:
+                iPtOnFolding = folding_pts_locator.InsertNextPoint( on_plane )
+                folding_pts_on_plane.InsertNextPoint( on_plane )
+                folding_pts_on_surface.InsertNextPoint( surface.GetPoint( plane_to_kq[ iPtOnPlane ] ) )
+            plane_to_folding[ int( iPtOnPlane ) ] = iPtOnFolding
+    for iSurfacePoly in range( surface.GetNumberOfPolys() ):
+        face_label = surface.GetCellData().GetScalars().GetTuple1( iSurfacePoly )
+        #if not face_label in show_faces:
+        #    continue
+        iPlanePoly = [ i for i in range( trans.GetOutput().GetNumberOfPolys() ) if trans.GetOutput().GetCellData().GetScalars().GetTuple1( i ) == face_label ][0]
+        cells.InsertNextCell(3)
+        for iiPt in range(3):
+            iSurfacePt = surface.GetCell( iSurfacePoly ).GetPointId( iiPt )
+            iiPlanePoint = [ i for i in range( 7 ) if plane_to_kq[ trans.GetOutput().GetCell( iPlanePoly ).GetPointId( i ) ] == iSurfacePt ][0]
+            iPlanePt = trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iiPlanePoint )
+            cells.InsertCellPoint( plane_to_folding[ iPlanePt ] )
+        foldingScalars.InsertNextValue( plane_ids[ iPlanePoly ] )
+    folding.SetPoints( pts )
+    folding.SetPolys( cells )
+    folding_on_plane.SetPoints( folding_pts_on_plane )
+    folding_on_surface.SetPoints( folding_pts_on_surface )
+    folding_on_plane_cells = vtk.vtkCellArray();
+    folding_on_plane_cells.DeepCopy( cells )
+    folding_on_plane.SetPolys( folding_on_plane_cells )
+    folding_on_surface_cells = vtk.vtkCellArray();
+    folding_on_surface_cells.DeepCopy( cells )
+    folding_on_surface.SetPolys( folding_on_surface_cells )
+
+    folding.GetCellData().SetScalars( foldingScalars )
+    foldingMapper = vtk.vtkPolyDataMapper()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        foldingMapper.SetInputData( folding )
+    else:
+        foldingMapper.SetInput( folding )
+    foldingMapper.SetScalarRange(0,24)
+    foldingMapper.SetLookupTable(lut)
+    foldingMapper.SetScalarModeToUseCellData()
+    foldingActor = vtk.vtkActor()
+    foldingActor.SetMapper( foldingMapper )
+    #foldingActor.GetProperty().EdgeVisibilityOn()
+    ren.AddActor( foldingActor )
 
 show_boundary = True
 boundary = vtk.vtkPolyData()
@@ -395,7 +400,9 @@ if show_boundary:
 
 label_faces = False
 label_points = False
-sources = [ folding ]
+label_face_ids = False
+sources = [ ]
+if draw_folding: sources.append( folding )
 if draw_plane: sources.append( trans.GetOutput() )
 if draw_surface: sources.append( surface )
 for source in sources:
@@ -416,9 +423,22 @@ for source in sources:
         labels_actor = vtk.vtkActor2D()
         labels_actor.SetMapper( labels )
         ren.AddActor( labels_actor )
+    if label_face_ids:
+        cell_centers = vtk.vtkCellCenters()
+        if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+            cell_centers.SetInputData( source )
+        else:
+            cell_centers.SetInput( source )
+        labels = vtk.vtkLabeledDataMapper()
+        labels.SetInputConnection( cell_centers.GetOutputPort() )
+        labels.GetLabelTextProperty().SetJustificationToCentered()
+        labels.GetLabelTextProperty().SetVerticalJustificationToCentered()
+        labels_actor = vtk.vtkActor2D()
+        labels_actor.SetMapper( labels )
+        ren.AddActor( labels_actor )
     if label_points:
         pd = vtk.vtkPolyData()
-        pd.ShallowCopy(pdc)
+        pd.ShallowCopy( source )
         pointData = vtk.vtkIntArray()
         for val in range(pd.GetNumberOfPoints()):
             pointData.InsertNextValue( val )
@@ -497,14 +517,15 @@ if render_orbit:
         
 animate_folding = True
 save_folding = False
-if animate_folding:
+if draw_folding and animate_folding:
     N = 300
+    R = 1
     iFrame = 0
     wif = vtk.vtkWindowToImageFilter()
     wif.SetInput(renWin)
     png = vtk.vtkPNGWriter()
     png.SetInputConnection(wif.GetOutputPort())
-    sequence = (range(N+1) + range(N+1)[::-1])*1 + range(N+1) + [N]*3*N
+    sequence = (range(N+1) + range(N+1)[::-1])*R + range(N+1) + [N]*3*N
     for iFold in sequence:
         theta = 0.1 * iFrame * 2 * math.pi / N
         iFrame = iFrame + 1
