@@ -394,11 +394,12 @@ if show_boundary:
     ren.AddActor( boundary_tubeActor )
 
 label_faces = False
-if label_faces:
-    sources = [ folding ]
-    if draw_plane: sources.append( trans.GetOutput() )
-    if draw_surface: sources.append( surface )
-    for source in sources:
+label_points = False
+sources = [ folding ]
+if draw_plane: sources.append( trans.GetOutput() )
+if draw_surface: sources.append( surface )
+for source in sources:
+    if label_faces:
         cell_centers = vtk.vtkCellCenters()
         if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
             cell_centers.SetInputData( source )
@@ -415,13 +416,7 @@ if label_faces:
         labels_actor = vtk.vtkActor2D()
         labels_actor.SetMapper( labels )
         ren.AddActor( labels_actor )
-
-label_points = False
-if label_points:
-    sources = [ folding ]
-    if draw_plane: sources.append( trans.GetOutput() )
-    if draw_surface: sources.append( surface )
-    for pdc in sources:
+    if label_points:
         pd = vtk.vtkPolyData()
         pd.ShallowCopy(pdc)
         pointData = vtk.vtkIntArray()
