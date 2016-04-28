@@ -148,7 +148,8 @@ kq_ids    = [ 1, 2, 0, 23, 20, 8, 22, 19, 7, 21, 18, 6, 12, 14, 13, 3, 17, 11, 5
 # original selection of plane faces to use: compact and three-way rotationally-symmetric
 #plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14, 16, 100, 20, 103, 21, 19, 104, 105, 106, 107, 108, 22, 18, 23 ]
 # new selection of plane faces to use: more amenable to folding since outer heptagons are laid flat as connected on the three trunks
-plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14, 16, 100, 110, 103, 21, 19, 104, 105, 23, 107, 108, 22, 18, 106, 107, 108, 109, 20 ]
+plane_ids = { 0:0, 1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:10, 8:11, 9:7, 10:8, 11:9, 12:13, 13:17, 14:12, 17:15, 18:14, 19:16, 23:21, 24:19, 27:23, 30:22, 31:18, 36:20 }
+#plane_ids = { 0:0, 1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:10, 8:11, 9:7, 10:8, 11:9, 12:13, 13:17, 14:12, 17:15, 18:14, 19:16, 26:22, 27:23, 34:21, 36:20, 42:19, 52:18 }
 outer_or_inner_type = [ 0,0,0,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0 ]
 tetrahedron_corner_type = [ 0,0,0,2,1,3,1,3,2,1,3,2,0,0,0,1,3,2,1,3,2,1,3,2 ]
 three_colors_type = [ 1,0,2,0,2,1,0,2,1,2,1,0,1,0,2,0,2,1,0,2,1,2,1,0 ]
@@ -244,7 +245,7 @@ trans.Update()
 plane_scalars = vtk.vtkIntArray()
 plane_scalars.SetNumberOfValues( trans.GetOutput().GetNumberOfPolys() )
 for i in range( trans.GetOutput().GetNumberOfPolys() ):
-    plane_scalars.SetValue( i, plane_ids[ i ] if i in range( len( plane_ids ) ) else 99 )
+    plane_scalars.SetValue( i, plane_ids[ i ] if i in plane_ids else 200+i )
 trans.GetOutput().GetCellData().SetScalars( plane_scalars )
 
 draw_plane = True
@@ -315,7 +316,7 @@ if draw_lines:
 draw_folding = True
 folding = vtk.vtkPolyData()
 if draw_folding:
-    show_faces = [ 0,8,20,23 ] # the backbone of the folding we think would be clearest
+    show_faces = [ 0,8,20,23,2,7,19,22,1,6,18,21 ] # the backbone of the folding we think would be clearest
 
     folding_pts_on_plane = vtk.vtkPoints()
     folding_pts_on_surface = vtk.vtkPoints()
@@ -328,7 +329,7 @@ if draw_folding:
     foldingScalars = vtk.vtkIntArray()
     plane_to_folding = {}
     for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
-        if iPlanePoly >= len( plane_ids ) or plane_ids[ iPlanePoly ] >= 24:
+        if not iPlanePoly in plane_ids:
             continue
         for iPt in range( 7 ):
             iPtOnPlane = trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt )
