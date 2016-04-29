@@ -31,9 +31,8 @@ def norm( a ): return mul(a,1/mag(a))
 def cross( a, b ): return ( a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0] )
 def rotateXY90acw( v ): return ( -v[1], v[0], 0 )
 def lerp( a, b, u ): return [ (1-u)*a[i] + u*b[i] for i in range(len(a)) ]
-def easing_interp( a, b, u ): 
-    v = (1 - math.cos(u*math.pi))/2
-    return [ (1-v)*a[i] + v*b[i] for i in range(len(a)) ]
+def easing( u ): return (1 - math.cos(u*math.pi)) / 2;
+def bezier( a, b, c, u ): return lerp( lerp( a, b, u ), lerp( b, c, u ), u );
 
 def intersectionOfTwoCircles( p1, r1, p2, r2 ):
     '''Return one of the two intersections of these circles in the X,Y plane.'''

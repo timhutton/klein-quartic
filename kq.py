@@ -319,6 +319,7 @@ draw_folding = True
 folding = vtk.vtkPolyData()
 if draw_folding:
     show_faces = [ 0,8,20,23,2,7,19,22,1,6,18,21 ] # the backbone of the folding we think would be clearest
+    hide_faces = [ 15,16,17,9,10,11,3,4,5 ] # debug
 
     folding_pts_on_plane = vtk.vtkPoints()
     folding_pts_on_surface = vtk.vtkPoints()
@@ -344,8 +345,8 @@ if draw_folding:
             plane_to_folding[ int( iPtOnPlane ) ] = iPtOnFolding
     for iSurfacePoly in range( surface.GetNumberOfPolys() ):
         face_label = surface.GetCellData().GetScalars().GetTuple1( iSurfacePoly )
-        #if not face_label in show_faces:
-        #    continue
+        #if not face_label in show_faces: continue
+        #if face_label in hide_faces: continue
         iPlanePoly = [ i for i in range( trans.GetOutput().GetNumberOfPolys() ) if trans.GetOutput().GetCellData().GetScalars().GetTuple1( i ) == face_label ][0]
         cells.InsertNextCell(3)
         for iiPt in range(3):
@@ -534,7 +535,13 @@ if draw_folding and animate_folding:
         iFrame = iFrame + 1
         u = iFold / float(N)
         for iFoldingPoint in range( folding.GetPoints().GetNumberOfPoints() ):
-            folding.GetPoints().SetPoint( iFoldingPoint, easing_interp( folding_on_plane.GetPoint( iFoldingPoint ), folding_on_surface.GetPoint( iFoldingPoint ), u ) )
+            if False:
+                folding.GetPoints().SetPoint( iFoldingPoint, lerp( folding_on_plane.GetPoint( iFoldingPoint ), folding_on_surface.GetPoint( iFoldingPoint ), easing( u ) ) )
+            else:
+                a = folding_on_plane.GetPoint( iFoldingPoint );
+                c = folding_on_surface.GetPoint( iFoldingPoint );
+                b = ( a[0], a[1], c[2] );
+                folding.GetPoints().SetPoint( iFoldingPoint, bezier( a, b, c, easing( u ) ) );
         ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
         ren.ResetCameraClippingRange()
         png.SetFileName("test"+str(iFrame).zfill(4)+".png")
