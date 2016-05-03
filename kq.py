@@ -520,6 +520,9 @@ if render_orbit:
         renWin.Render()
         png.Write()
         
+dtheta = 0.1 * 2 * math.pi / 300
+theta = 0
+
 animate_folding = True
 save_folding = False
 if draw_folding and animate_folding:
@@ -531,8 +534,6 @@ if draw_folding and animate_folding:
     png = vtk.vtkPNGWriter()
     png.SetInputConnection(wif.GetOutputPort())
     sequence = (range(N+1) + range(N+1)[::-1])*R + range(N+1) + [N]*3*N
-    dtheta = 0.1 * 2 * math.pi / N
-    theta = 0
     for iFold in sequence:
         theta = theta + dtheta
         iFrame = iFrame + 1
