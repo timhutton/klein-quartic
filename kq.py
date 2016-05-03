@@ -318,14 +318,15 @@ if draw_lines:
     
 draw_folding = True
 folding = vtk.vtkPolyData()
+folding_on_surface = vtk.vtkPolyData()
+folding_on_plane = vtk.vtkPolyData()
+foldingActor = vtk.vtkActor()
 if draw_folding:
     show_faces = [ 0,8,20,23,2,7,19,22,1,6,18,21 ] # the backbone of the folding we think would be clearest
     hide_faces = [ 15,16,17,9,10,11,3,4,5 ] # debug
 
     folding_pts_on_plane = vtk.vtkPoints()
     folding_pts_on_surface = vtk.vtkPoints()
-    folding_on_surface = vtk.vtkPolyData()
-    folding_on_plane = vtk.vtkPolyData()
     pts = vtk.vtkPoints()
     cells = vtk.vtkCellArray()
     folding_pts_locator = vtk.vtkPointLocator()
@@ -376,7 +377,6 @@ if draw_folding:
     foldingMapper.SetScalarRange(0,24)
     foldingMapper.SetLookupTable(lut)
     foldingMapper.SetScalarModeToUseCellData()
-    foldingActor = vtk.vtkActor()
     foldingActor.SetMapper( foldingMapper )
     #foldingActor.GetProperty().EdgeVisibilityOn()
     ren.AddActor( foldingActor )
@@ -531,8 +531,10 @@ if draw_folding and animate_folding:
     png = vtk.vtkPNGWriter()
     png.SetInputConnection(wif.GetOutputPort())
     sequence = (range(N+1) + range(N+1)[::-1])*R + range(N+1) + [N]*3*N
+    dtheta = 0.1 * 2 * math.pi / N
+    theta = 0
     for iFold in sequence:
-        theta = 0.1 * iFrame * 2 * math.pi / N
+        theta = theta + dtheta
         iFrame = iFrame + 1
         u = iFold / float(N)
         for iFoldingPoint in range( folding.GetPoints().GetNumberOfPoints() ):
@@ -552,5 +554,45 @@ if draw_folding and animate_folding:
         renWin.Render()
         if save_folding:
             png.Write()
+            
+animate_probe = False
+if animate_probe:
+    foldingActor.GetProperty().SetOpacity(0.6)
+    locator = vtk.vtkCellLocator()
+    locator.SetDataSet( folding_on_plane )
+    locator.BuildLocator()
+    probe_on_plane = vtk.vtkSphereSource()
+    probe_on_plane.SetRadius(0.05)
+    probe_on_plane_mapper = vtk.vtkPolyDataMapper()
+    probe_on_plane_mapper.SetInputConnection( probe_on_plane.GetOutputPort() )
+    probe_on_plane_actor = vtk.vtkActor()
+    probe_on_plane_actor.SetMapper( probe_on_plane_mapper )
+    ren.AddActor( probe_on_plane_actor )
+    probe_on_surface_actor = vtk.vtkActor()
+    probe_on_surface_actor.SetMapper( probe_on_plane_mapper )
+    ren.AddActor( probe_on_surface_actor )
+    a = all_verts[0]
+    b = all_verts[0]
+    N = 5000
+    speed = 0.003
+    da = mul( [1,0,0], speed )
+    for iFrame in range(N):
+        new_a = add( a, da )
+        cell_id = vtk.mutable(0)
+        sub_id = vtk.mutable(0)
+        d2 = vtk.mutable(0.0)
+        cell = vtk.vtkGenericCell()
+        found = locator.FindClosestPointWithinRadius( new_a, 0.01, b, cell, cell_id, sub_id, d2 )
+        if found: 
+            a = new_a
+            probe_on_plane_actor.SetPosition( a )
+            probe_on_surface_actor.SetPosition( getPointOnOtherMesh( folding_on_plane, locator, folding_on_surface, b ) )
+        else:
+            psi = random.random()*2*math.pi
+            da = mul( [ math.cos(psi), math.sin(psi), 0 ], speed )
+        theta = theta + dtheta
+        ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
+        ren.ResetCameraClippingRange()
+        renWin.Render()
 
 iren.Start()

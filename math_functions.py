@@ -211,3 +211,19 @@ def getDual( pd ):
     cleaner.SetTolerance(0.0001)
     cleaner.Update()
     return cleaner.GetOutput()
+
+def getPointOnOtherMesh( a, a_locator, b, p ):
+    '''Given two vtkPolyData's with matching topology and a vtkCellLocator for the first, carry point p from one to the other.'''
+    cell_id = vtk.mutable(0)
+    sub_id = vtk.mutable(0)
+    d2 = vtk.mutable(0.0)
+    cell = vtk.vtkGenericCell()
+    p2 = p
+    found = a_locator.FindClosestPoint( p, p2, cell, cell_id, sub_id, d2 )
+    p3 = p2
+    pcoords = [0,0,0]
+    weights = []
+    cell.EvaluatePosition( p2, p3, sub_id, pcoords, d2, weights )
+    p4 = p3
+    b.GetCell( cell_id ).EvaluateLocation( sub_id, pcoords, p4, weights )
+    return p4
