@@ -227,3 +227,21 @@ def getPointOnOtherMesh( a, a_locator, b, p ):
     p4 = p3
     b.GetCell( cell_id ).EvaluateLocation( sub_id, pcoords, p4, weights )
     return p4
+
+def GetConnectedVertices( mesh, iPt ):
+    '''Return a list of the indices of vertices connected to iPt in a vtkPolyData mesh.'''
+    connectedVertices = set()
+    # iterate over the cells that iPt is a part of 
+    cellIdList = vtk.vtkIdList()
+    mesh.GetPointCells( iPt, cellIdList )
+    for i in range( cellIdList.GetNumberOfIds() ):
+        cell = mesh.GetCell( cellIdList.GetId(i) )
+        # iterate over the edges in that cell
+        for e in range( cell.GetNumberOfEdges() ):
+            edge = cell.GetEdge( e ) 
+            pointIdList = edge.GetPointIds()
+            if pointIdList.GetId(0) == iPt:
+                connectedVertices.add( int( pointIdList.GetId(1) ) )
+            elif pointIdList.GetId(1) == iPt:
+                connectedVertices.add( int( pointIdList.GetId(0) ) )
+    return list( connectedVertices )

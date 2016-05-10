@@ -229,33 +229,50 @@ if draw_edges:
     tubeActor.GetProperty().SetColor(0,0,0)
     ren.AddActor(tubeActor)
 
-plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
+#plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
+plane = getHyperbolicPlaneTiling( 3, 7, 8 )
 #plane = getDual( getHyperbolicPlaneTiling( 3, 7, 12 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 
-plane_trans = vtk.vtkTransform()
-plane_trans.Translate(all_verts[0])
-plane_trans.Scale(0.7,0.7,0.7)
-trans = vtk.vtkTransformPolyDataFilter()
-trans.SetTransform(plane_trans)
-if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-    trans.SetInputData(plane)
-else:
-    trans.SetInput(plane)
-trans.Update()
+if True:
+    # move the plane into position
+    plane_trans = vtk.vtkTransform()
+    plane_trans.Translate(all_verts[0])
+    plane_trans.Scale(0.7,0.7,0.7)
+    trans = vtk.vtkTransformPolyDataFilter()
+    trans.SetTransform(plane_trans)
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        trans.SetInputData(plane)
+    else:
+        trans.SetInput(plane)
+    trans.Update()
+    plane.DeepCopy( trans.GetOutput() )
+    
+if False:
+    # DEBUG: subdivide the plane
+    tri = vtk.vtkTriangleFilter()
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        tri.SetInputData(plane)
+    else:
+        tri.SetInput(plane)
+    subdiv = vtk.vtkLinearSubdivisionFilter()
+    subdiv.SetInputConnection( tri.GetOutputPort() )
+    subdiv.SetNumberOfSubdivisions( 0 )
+    subdiv.Update()
+    plane.DeepCopy(subdiv.GetOutput())
 
 plane_scalars = vtk.vtkIntArray()
-plane_scalars.SetNumberOfValues( trans.GetOutput().GetNumberOfPolys() )
-for i in range( trans.GetOutput().GetNumberOfPolys() ):
+plane_scalars.SetNumberOfValues( plane.GetNumberOfPolys() )
+for i in range( plane.GetNumberOfPolys() ):
     plane_scalars.SetValue( i, plane_ids[ i ] if i in plane_ids else 200+i )
-trans.GetOutput().GetCellData().SetScalars( plane_scalars )
+plane.GetCellData().SetScalars( plane_scalars )
 
 draw_plane = True
 if draw_plane:
     planeMapper = vtk.vtkPolyDataMapper()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-        planeMapper.SetInputData( trans.GetOutput() )
+        planeMapper.SetInputData( plane )
     else:
-        planeMapper.SetInput( trans.GetOutput() )
+        planeMapper.SetInput( plane )
     planeMapper.SetLookupTable(lut)
     planeMapper.SetScalarModeToUseCellData()
     planeMapper.SetScalarRange(0,24)
@@ -303,7 +320,7 @@ if draw_lines:
     for iPlanePt,iKQPoint in plane_to_kq.iteritems():
         cells.InsertNextCell(2)
         cells.InsertCellPoint( pts.InsertNextPoint( surface.GetPoint(iKQPoint) ) )
-        cells.InsertCellPoint( pts.InsertNextPoint( trans.GetOutput().GetPoint(iPlanePt) ) )
+        cells.InsertCellPoint( pts.InsertNextPoint( plane.GetPoint(iPlanePt) ) )
     lines.SetPoints(pts)
     lines.SetLines(cells)
     mapper = vtk.vtkPolyDataMapper()
@@ -316,7 +333,7 @@ if draw_lines:
     actor.GetProperty().SetColor(0,0,0)
     ren.AddActor(actor)
     
-draw_folding = True
+draw_folding = False
 folding = vtk.vtkPolyData()
 folding_on_surface = vtk.vtkPolyData()
 folding_on_plane = vtk.vtkPolyData()
@@ -333,12 +350,12 @@ if draw_folding:
     folding_pts_locator.InitPointInsertion( pts, [-10,10,-10,10,-10,10] )
     foldingScalars = vtk.vtkIntArray()
     plane_to_folding = {}
-    for iPlanePoly in range( trans.GetOutput().GetNumberOfPolys() ):
+    for iPlanePoly in range( plane.GetNumberOfPolys() ):
         if not iPlanePoly in plane_ids:
             continue
         for iPt in range( 7 ):
-            iPtOnPlane = trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iPt )
-            on_plane = trans.GetOutput().GetPoint( iPtOnPlane )
+            iPtOnPlane = plane.GetCell( iPlanePoly ).GetPointId( iPt )
+            on_plane = plane.GetPoint( iPtOnPlane )
             iPtOnFolding = folding_pts_locator.IsInsertedPoint( on_plane )
             if iPtOnFolding == -1:
                 iPtOnFolding = folding_pts_locator.InsertNextPoint( on_plane )
@@ -349,12 +366,12 @@ if draw_folding:
         face_label = surface.GetCellData().GetScalars().GetTuple1( iSurfacePoly )
         #if not face_label in show_faces: continue
         #if face_label in hide_faces: continue
-        iPlanePoly = [ i for i in range( trans.GetOutput().GetNumberOfPolys() ) if trans.GetOutput().GetCellData().GetScalars().GetTuple1( i ) == face_label ][0]
+        iPlanePoly = [ i for i in range( plane.GetNumberOfPolys() ) if plane.GetCellData().GetScalars().GetTuple1( i ) == face_label ][0]
         cells.InsertNextCell(3)
         for iiPt in range(3):
             iSurfacePt = surface.GetCell( iSurfacePoly ).GetPointId( iiPt )
-            iiPlanePoint = [ i for i in range( 7 ) if plane_to_kq[ trans.GetOutput().GetCell( iPlanePoly ).GetPointId( i ) ] == iSurfacePt ][0]
-            iPlanePt = trans.GetOutput().GetCell( iPlanePoly ).GetPointId( iiPlanePoint )
+            iiPlanePoint = [ i for i in range( 7 ) if plane_to_kq[ plane.GetCell( iPlanePoly ).GetPointId( i ) ] == iSurfacePt ][0]
+            iPlanePt = plane.GetCell( iPlanePoly ).GetPointId( iiPlanePoint )
             cells.InsertCellPoint( plane_to_folding[ iPlanePt ] )
         foldingScalars.InsertNextValue( plane_ids[ iPlanePoly ] )
     folding.SetPoints( pts )
@@ -408,7 +425,7 @@ label_points = False
 label_face_ids = False
 sources = [ ]
 if draw_folding: sources.append( folding )
-if draw_plane: sources.append( trans.GetOutput() )
+if draw_plane: sources.append( plane )
 if draw_surface: sources.append( surface )
 for source in sources:
     if label_faces:
@@ -594,6 +611,72 @@ if animate_probe:
         theta = theta + dtheta
         ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
         ren.ResetCameraClippingRange()
+        renWin.Render()
+        
+def relaxUniformMesh( m, rest_length, max_speed ):
+    '''Apply one iteration of spring forces to make every edge approach rest_length. Returns the total distance of vertices moved.'''
+    force = [ [0,0,0] for i in range(m.GetNumberOfPoints()) ]
+    total_move = 0
+    for iPt in range( m.GetNumberOfPoints() ):
+        p = m.GetPoint( iPt )
+        # for each neighbor, add its spring forces on this vertex
+        connected = GetConnectedVertices( m, iPt )
+        next_connected = set()
+        for iPt2 in connected:
+            p2 = m.GetPoint( iPt2 )
+            d = mag( sub( p, p2 ) )
+            f = mul( norm( sub( p, p2 ) ), rest_length - d )
+            force[iPt] = add( force[iPt], f )
+            next_connected.update( GetConnectedVertices( m, iPt2 ) )
+        next_connected.discard( iPt )
+        # add a weak repulsion from the next neighbors
+        for iPt2 in next_connected:
+            p2 = m.GetPoint( iPt2 )
+            d = mag( sub( p, p2 ) )
+            if d < 8 * rest_length:
+                f = mul( norm( sub( p, p2 ) ), 0.01 )
+                force[iPt] = add( force[iPt], f )
+    for iPt in range( m.GetNumberOfPoints() ):
+        speed = mag( force[iPt] ) 
+        if speed > max_speed:
+            force[iPt] = mul( force[iPt], max_speed / speed )
+        p = m.GetPoint( iPt )
+        p = add( p, force[iPt] )
+        m.GetPoints().SetPoint( iPt, p )
+        total_move = total_move + speed
+    m.Modified()
+    return total_move
+        
+relax_plane = True
+if relax_plane:
+    # first add some z noise to break the symmetry of the plane
+    for iPt in range( plane.GetNumberOfPoints() ):
+        p = list( plane.GetPoint( iPt ) )
+        #p[2] = p[2] + random.random()*0.02 - 0.01
+        v = sub( p, plane.GetPoint(0) )
+        p[2] = p[2] + 0.1 * math.cos( 4 * math.atan2( v[1], v[0] ) )
+        plane.GetPoints().SetPoint( iPt, p )
+    # then repeatedly relax the mesh
+    for iFrame in range(1000):
+        if False:
+            # method 2
+            smooth = vtk.vtkWindowedSincPolyDataFilter()
+            #smooth = vtk.vtkSmoothPolyDataFilter()
+            if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+                smooth.SetInputData( plane )
+            else:
+                smooth.SetInput( plane )
+            smooth.SetNumberOfIterations(150);
+            #smooth.SetRelaxationFactor(0.1);
+            smooth.FeatureEdgeSmoothingOff();
+            smooth.BoundarySmoothingOn();
+            smooth.Update()
+            plane.DeepCopy( smooth.GetOutput() )
+        else:
+            # method 1
+            total_move = relaxUniformMesh( plane, 0.2, 0.01 )
+            if total_move < .1:
+                break
         renWin.Render()
 
 iren.Start()
