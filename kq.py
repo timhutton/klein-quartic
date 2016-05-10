@@ -230,7 +230,8 @@ if draw_edges:
     ren.AddActor(tubeActor)
 
 #plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
-plane = getHyperbolicPlaneTiling( 3, 7, 8 )
+#plane = getHyperbolicPlaneTiling( 3, 7, 5 )
+plane = getDual( getHyperbolicPlaneTiling( 3, 7, 6 ) )
 #plane = getDual( getHyperbolicPlaneTiling( 3, 7, 12 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 
 if True:
@@ -256,7 +257,7 @@ if False:
         tri.SetInput(plane)
     subdiv = vtk.vtkLinearSubdivisionFilter()
     subdiv.SetInputConnection( tri.GetOutputPort() )
-    subdiv.SetNumberOfSubdivisions( 0 )
+    subdiv.SetNumberOfSubdivisions( 2 )
     subdiv.Update()
     plane.DeepCopy(subdiv.GetOutput())
 
@@ -613,35 +614,44 @@ if animate_probe:
         ren.ResetCameraClippingRange()
         renWin.Render()
         
-def relaxUniformMesh( m, rest_length, max_speed ):
-    '''Apply one iteration of spring forces to make every edge approach rest_length. Returns the total distance of vertices moved.'''
-    force = [ [0,0,0] for i in range(m.GetNumberOfPoints()) ]
-    total_move = 0
+def getNeighborhoodConnections( m ):
+    '''Return a list of 2-tuples: connected-vertices and next-connected vertices.'''
+    connections = []
     for iPt in range( m.GetNumberOfPoints() ):
-        p = m.GetPoint( iPt )
-        # for each neighbor, add its spring forces on this vertex
         connected = GetConnectedVertices( m, iPt )
         next_connected = set()
         for iPt2 in connected:
-            p2 = m.GetPoint( iPt2 )
-            d = mag( sub( p, p2 ) )
-            f = mul( norm( sub( p, p2 ) ), rest_length - d )
-            force[iPt] = add( force[iPt], f )
             next_connected.update( GetConnectedVertices( m, iPt2 ) )
         next_connected.discard( iPt )
+        connections.append( (connected,next_connected) )
+    return connections
+    
+def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
+    '''Apply one iteration of spring forces to make every edge approach rest_length. Returns the total distance of vertices moved.'''
+    total_move = 0
+    for iPt in range( m.GetNumberOfPoints() ):
+        connected, next_connected = connections[ iPt ]
+        p = m.GetPoint( iPt )
+        # for each neighbor, add its spring forces on this vertex
+        for iPt2 in connected:
+            p2 = m.GetPoint( iPt2 )
+            d = mag( sub( p, p2 ) )
+            f = mul( norm( sub( p, p2 ) ), 0.5*(rest_length - d) )
+            velocity[iPt] = add( velocity[iPt], f )
         # add a weak repulsion from the next neighbors
         for iPt2 in next_connected:
             p2 = m.GetPoint( iPt2 )
             d = mag( sub( p, p2 ) )
-            if d < 8 * rest_length:
-                f = mul( norm( sub( p, p2 ) ), 0.01 )
-                force[iPt] = add( force[iPt], f )
+            if True:#d < 8 * rest_length:
+                f = mul( norm( sub( p, p2 ) ), 0.005 )
+                velocity[iPt] = add( velocity[iPt], f )
     for iPt in range( m.GetNumberOfPoints() ):
-        speed = mag( force[iPt] ) 
+        speed = mag( velocity[iPt] ) 
+        velocity[iPt] = mul( velocity[iPt], 0.95 ) # friction
         if speed > max_speed:
-            force[iPt] = mul( force[iPt], max_speed / speed )
+            velocity[iPt] = mul( velocity[iPt], max_speed / speed )
         p = m.GetPoint( iPt )
-        p = add( p, force[iPt] )
+        p = add( p, velocity[iPt] )
         m.GetPoints().SetPoint( iPt, p )
         total_move = total_move + speed
     m.Modified()
@@ -649,34 +659,19 @@ def relaxUniformMesh( m, rest_length, max_speed ):
         
 relax_plane = True
 if relax_plane:
+    connections = getNeighborhoodConnections( plane )
     # first add some z noise to break the symmetry of the plane
     for iPt in range( plane.GetNumberOfPoints() ):
         p = list( plane.GetPoint( iPt ) )
-        #p[2] = p[2] + random.random()*0.02 - 0.01
-        v = sub( p, plane.GetPoint(0) )
-        p[2] = p[2] + 0.1 * math.cos( 4 * math.atan2( v[1], v[0] ) )
+        p[2] = p[2] + random.random()*0.02 - 0.01
         plane.GetPoints().SetPoint( iPt, p )
     # then repeatedly relax the mesh
-    for iFrame in range(1000):
-        if False:
-            # method 2
-            smooth = vtk.vtkWindowedSincPolyDataFilter()
-            #smooth = vtk.vtkSmoothPolyDataFilter()
-            if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-                smooth.SetInputData( plane )
-            else:
-                smooth.SetInput( plane )
-            smooth.SetNumberOfIterations(150);
-            #smooth.SetRelaxationFactor(0.1);
-            smooth.FeatureEdgeSmoothingOff();
-            smooth.BoundarySmoothingOn();
-            smooth.Update()
-            plane.DeepCopy( smooth.GetOutput() )
-        else:
-            # method 1
-            total_move = relaxUniformMesh( plane, 0.2, 0.01 )
-            if total_move < .1:
-                break
+    velocity = [ [0,0,0] for i in range(plane.GetNumberOfPoints()) ]
+    for iFrame in range(10000):
+        total_move = relaxUniformMesh( plane, 0.2, 0.01, velocity, connections )
+        average_move = total_move / plane.GetNumberOfPoints()
+        if average_move < 1e-04:
+            break
         renWin.Render()
 
 iren.Start()
