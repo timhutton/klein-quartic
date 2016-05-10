@@ -230,8 +230,8 @@ if draw_edges:
     ren.AddActor(tubeActor)
 
 #plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
-#plane = getHyperbolicPlaneTiling( 3, 7, 5 )
-plane = getDual( getHyperbolicPlaneTiling( 3, 7, 6 ) )
+#plane = getHyperbolicPlaneTiling( 3, 7, 7 )
+plane = getDual( getHyperbolicPlaneTiling( 3, 7, 7 ) )
 #plane = getDual( getHyperbolicPlaneTiling( 3, 7, 12 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 
 if True:
@@ -247,19 +247,6 @@ if True:
         trans.SetInput(plane)
     trans.Update()
     plane.DeepCopy( trans.GetOutput() )
-    
-if False:
-    # DEBUG: subdivide the plane
-    tri = vtk.vtkTriangleFilter()
-    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-        tri.SetInputData(plane)
-    else:
-        tri.SetInput(plane)
-    subdiv = vtk.vtkLinearSubdivisionFilter()
-    subdiv.SetInputConnection( tri.GetOutputPort() )
-    subdiv.SetNumberOfSubdivisions( 2 )
-    subdiv.Update()
-    plane.DeepCopy(subdiv.GetOutput())
 
 plane_scalars = vtk.vtkIntArray()
 plane_scalars.SetNumberOfValues( plane.GetNumberOfPolys() )
@@ -660,18 +647,22 @@ def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
 relax_plane = True
 if relax_plane:
     connections = getNeighborhoodConnections( plane )
-    # first add some z noise to break the symmetry of the plane
+    # break the symmetry of the plane
     for iPt in range( plane.GetNumberOfPoints() ):
         p = list( plane.GetPoint( iPt ) )
-        p[2] = p[2] + random.random()*0.02 - 0.01
+        v = sub( p, plane.GetPoint(0) )
+        p[2] = p[2] + mag(v) * math.cos( 3.0 * math.atan2( v[1], v[0] ) )
         plane.GetPoints().SetPoint( iPt, p )
     # then repeatedly relax the mesh
     velocity = [ [0,0,0] for i in range(plane.GetNumberOfPoints()) ]
     for iFrame in range(10000):
-        total_move = relaxUniformMesh( plane, 0.2, 0.01, velocity, connections )
+        total_move = relaxUniformMesh( plane, 0.15, 0.01, velocity, connections )
         average_move = total_move / plane.GetNumberOfPoints()
-        if average_move < 1e-04:
+        if average_move < 1e-05:
             break
+        theta = theta + dtheta
+        ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
+        ren.ResetCameraClippingRange()
         renWin.Render()
 
 iren.Start()
