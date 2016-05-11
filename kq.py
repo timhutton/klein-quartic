@@ -229,9 +229,9 @@ if draw_edges:
     tubeActor.GetProperty().SetColor(0,0,0)
     ren.AddActor(tubeActor)
 
-#plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
+plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 #plane = getHyperbolicPlaneTiling( 3, 7, 7 )
-plane = getDual( getHyperbolicPlaneTiling( 3, 7, 7 ) )
+#plane = getDual( getHyperbolicPlaneTiling( 3, 7, 7 ) )
 #plane = getDual( getHyperbolicPlaneTiling( 3, 7, 12 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 
 if True:
@@ -321,7 +321,7 @@ if draw_lines:
     actor.GetProperty().SetColor(0,0,0)
     ren.AddActor(actor)
     
-draw_folding = False
+draw_folding = True
 folding = vtk.vtkPolyData()
 folding_on_surface = vtk.vtkPolyData()
 folding_on_plane = vtk.vtkPolyData()
@@ -525,10 +525,10 @@ if render_orbit:
         renWin.Render()
         png.Write()
         
-dtheta = 0.1 * 2 * math.pi / 300
-theta = 0
+dtheta = 1.0 * 2 * math.pi / 300
+theta = math.pi/6
 
-animate_folding = True
+animate_folding = False
 save_folding = False
 if draw_folding and animate_folding:
     N = 300
@@ -616,6 +616,9 @@ def getNeighborhoodConnections( m ):
 def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
     '''Apply one iteration of spring forces to make every edge approach rest_length. Returns the total distance of vertices moved.'''
     total_move = 0
+    k1 = 0.3     # spring constant for neighbors
+    k2 = 0.01    # magnitude of next-neighbor repulsion
+    k3 = 0.9     # damping
     for iPt in range( m.GetNumberOfPoints() ):
         connected, next_connected = connections[ iPt ]
         p = m.GetPoint( iPt )
@@ -623,18 +626,18 @@ def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
         for iPt2 in connected:
             p2 = m.GetPoint( iPt2 )
             d = mag( sub( p, p2 ) )
-            f = mul( norm( sub( p, p2 ) ), 0.5*(rest_length - d) )
+            f = mul( norm( sub( p, p2 ) ), k1*(rest_length - d) )
             velocity[iPt] = add( velocity[iPt], f )
         # add a weak repulsion from the next neighbors
         for iPt2 in next_connected:
             p2 = m.GetPoint( iPt2 )
             d = mag( sub( p, p2 ) )
             if True:#d < 8 * rest_length:
-                f = mul( norm( sub( p, p2 ) ), 0.005 )
+                f = mul( norm( sub( p, p2 ) ), k2 )
                 velocity[iPt] = add( velocity[iPt], f )
     for iPt in range( m.GetNumberOfPoints() ):
         speed = mag( velocity[iPt] ) 
-        velocity[iPt] = mul( velocity[iPt], 0.95 ) # friction
+        velocity[iPt] = mul( velocity[iPt], k3 )
         if speed > max_speed:
             velocity[iPt] = mul( velocity[iPt], max_speed / speed )
         p = m.GetPoint( iPt )
@@ -644,25 +647,38 @@ def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
     m.Modified()
     return total_move
         
-relax_plane = True
-if relax_plane:
-    connections = getNeighborhoodConnections( plane )
-    # break the symmetry of the plane
-    for iPt in range( plane.GetNumberOfPoints() ):
-        p = list( plane.GetPoint( iPt ) )
-        v = sub( p, plane.GetPoint(0) )
-        p[2] = p[2] + mag(v) * math.cos( 3.0 * math.atan2( v[1], v[0] ) )
-        plane.GetPoints().SetPoint( iPt, p )
+relax = True
+if relax:
+    folding.SetPoints( folding_on_surface.GetPoints() )
+    connections = getNeighborhoodConnections( folding )
+    wif = vtk.vtkWindowToImageFilter()
+    wif.SetInput(renWin)
+    png = vtk.vtkPNGWriter()
+    png.SetInputConnection(wif.GetOutputPort())
+    if False:
+        # break the symmetry of the plane
+        for iPt in range( folding.GetNumberOfPoints() ):
+            p = list( folding.GetPoint( iPt ) )
+            v = sub( p, folding.GetPoint(0) )
+            p[2] = p[2] - mag(v) * math.cos( 3.0 * math.atan2( v[1], v[0] ) )
+            folding.GetPoints().SetPoint( iPt, p )
     # then repeatedly relax the mesh
-    velocity = [ [0,0,0] for i in range(plane.GetNumberOfPoints()) ]
-    for iFrame in range(10000):
-        total_move = relaxUniformMesh( plane, 0.15, 0.01, velocity, connections )
-        average_move = total_move / plane.GetNumberOfPoints()
-        if average_move < 1e-05:
-            break
+    velocity = [ [0,0,0] for i in range(folding.GetNumberOfPoints()) ]
+    N = 500
+    for iFrame in range( N ):
+        total_move = 0
+        average_move = 0
+        n_subframes = 0
+        while n_subframes < 10 and average_move < 1e-02: # (attempt to keep the speed approximately constant)
+            total_move = total_move + relaxUniformMesh( folding, 0.1, 0.002, velocity, connections )
+            average_move = total_move / folding.GetNumberOfPoints()
+            n_subframes = n_subframes + 1
         theta = theta + dtheta
         ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
         ren.ResetCameraClippingRange()
         renWin.Render()
+        png.SetFileName("test"+str(N-1-iFrame).zfill(4)+".png")
+        wif.Modified()
+        png.Write()
 
 iren.Start()
