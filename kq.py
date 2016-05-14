@@ -135,8 +135,8 @@ iren.SetRenderWindow(renWin)
 track = vtk.vtkInteractorStyleTrackballCamera()
 iren.SetInteractorStyle(track)
 ren.SetBackground(0.95, 0.9, 0.85)
-#renWin.SetSize(800, 600)
-renWin.SetSize(1280, 720)
+renWin.SetSize(800, 600)
+#renWin.SetSize(1280, 720)
 
 lights = vtk.vtkLightKit()
 lights.AddLightsToRenderer( ren )
@@ -145,11 +145,6 @@ surface = makePolyData( all_verts, faces_as_tris )
 edges = makePolyData( all_verts, outer_faces + inner_faces )
 
 kq_ids    = [ 1, 2, 0, 23, 20, 8, 22, 19, 7, 21, 18, 6, 12, 14, 13, 3, 17, 11, 5, 16, 10, 4, 15, 9 ]
-# original selection of plane faces to use: compact and three-way rotationally-symmetric:
-#plane_ids = [ 0, 1, 2, 3, 4, 5, 6, 10, 11, 7, 8, 9, 13, 17, 12, 101, 102, 15, 14, 16, 100, 20, 103, 21, 19, 104, 105, 106, 107, 108, 22, 18, 23 ]
-# new selection of plane faces to use: more amenable to folding since outer heptagons are laid flat as connected on the three trunks:
-#plane_ids = { 0:0, 1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:10, 8:11, 9:7, 10:8, 11:9, 12:13, 13:17, 14:12, 17:15, 18:14, 19:16, 23:21, 24:19, 27:23, 30:22, 31:18, 36:20 }
-#plane_ids = { 0:0, 1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:10, 8:11, 9:7, 10:8, 11:9, 12:13, 13:17, 14:12, 17:15, 18:14, 19:16, 26:22, 27:23, 34:21, 36:20, 42:19, 52:18 }
 plane_ids = { 0:0, 1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:10, 8:11, 9:7, 10:8, 11:9, 12:13, 14:12, 15:15, 16:16, 18:14, 20:17, 26:22, 27:23, 34:21, 36:20, 42:19, 52:18 }
 outer_or_inner_type = [ 0,0,0,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0 ]
 tetrahedron_corner_type = [ 0,0,0,2,1,3,1,3,2,1,3,2,0,0,0,1,3,2,1,3,2,1,3,2 ]
@@ -229,10 +224,10 @@ if draw_edges:
     tubeActor.GetProperty().SetColor(0,0,0)
     ren.AddActor(tubeActor)
 
-#plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
+plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 #plane = getHyperbolicPlaneTiling( 3, 7, 7 )
 #plane = getDual( getHyperbolicPlaneTiling( 3, 7, 7 ) )
-plane = getDual( getHyperbolicPlaneTiling( 3, 7, 12 ) ) # (we do it this way to get a vertex at the center instead of a cell)
+#plane = getDual( getHyperbolicPlaneTiling( 3, 7, 12 ) ) # (we do it this way to get a vertex at the center instead of a cell)
 
 if True:
     # move the plane into position
@@ -301,36 +296,12 @@ plane_to_kq = { 0:0,1:8,2:15,3:14,4:18,5:17,6:16,7:9,8:10,9:30,10:31,11:24,12:25
                 126:39,127:32,128:1,129:13,130:38,134:27,135:47,136:46,137:45,142:46,143:34,144:33,
                 163:49,164:50,165:39,201:55,202:43,203:44 }
 
-draw_lines = False
-if draw_lines:
-    lines = vtk.vtkPolyData()
-    pts = vtk.vtkPoints()
-    cells = vtk.vtkCellArray()
-    for iPlanePt,iKQPoint in plane_to_kq.iteritems():
-        cells.InsertNextCell(2)
-        cells.InsertCellPoint( pts.InsertNextPoint( surface.GetPoint(iKQPoint) ) )
-        cells.InsertCellPoint( pts.InsertNextPoint( plane.GetPoint(iPlanePt) ) )
-    lines.SetPoints(pts)
-    lines.SetLines(cells)
-    mapper = vtk.vtkPolyDataMapper()
-    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-        mapper.SetInputData(lines)
-    else:
-        mapper.SetInput(lines)
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-    actor.GetProperty().SetColor(0,0,0)
-    ren.AddActor(actor)
-    
 draw_folding = True
 folding = vtk.vtkPolyData()
 folding_on_surface = vtk.vtkPolyData()
 folding_on_plane = vtk.vtkPolyData()
 foldingActor = vtk.vtkActor()
 if draw_folding:
-    show_faces = [ 0,8,20,23,2,7,19,22,1,6,18,21 ] # the backbone of the folding we think would be clearest
-    hide_faces = [ 15,16,17,9,10,11,3,4,5 ] # debug
-
     folding_pts_on_plane = vtk.vtkPoints()
     folding_pts_on_surface = vtk.vtkPoints()
     pts = vtk.vtkPoints()
@@ -353,8 +324,6 @@ if draw_folding:
             plane_to_folding[ int( iPtOnPlane ) ] = iPtOnFolding
     for iSurfacePoly in range( surface.GetNumberOfPolys() ):
         face_label = surface.GetCellData().GetScalars().GetTuple1( iSurfacePoly )
-        #if not face_label in show_faces: continue
-        #if face_label in hide_faces: continue
         iPlanePoly = [ i for i in range( plane.GetNumberOfPolys() ) if plane.GetCellData().GetScalars().GetTuple1( i ) == face_label ][0]
         cells.InsertNextCell(3)
         for iiPt in range(3):
@@ -379,10 +348,8 @@ if draw_folding:
     foldingMapper = vtk.vtkPolyDataMapper()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
         foldingNormals.SetInputData( folding )
-        #foldingMapper.SetInputData( folding )
     else:
         foldingNormals.SetInput( folding )
-        #foldingMapper.SetInput( folding )
     foldingNormals.SplittingOff()
     foldingMapper.SetInputConnection( foldingNormals.GetOutputPort() )
     foldingMapper.SetScalarRange(0,24)
@@ -517,110 +484,9 @@ ren.GetActiveCamera().SetFocalPoint(0,0,-0.2)
 ren.ResetCameraClippingRange()
 renWin.Render()
 
-render_orbit = False
-if render_orbit:
-    N = 1000
-    wif = vtk.vtkWindowToImageFilter()
-    wif.SetInput(renWin)
-    png = vtk.vtkPNGWriter()
-    png.SetInputConnection(wif.GetOutputPort())
-    for iFrame in range(N):
-        theta = iFrame * 2 * math.pi / N
-        png.SetFileName("test"+str(iFrame).zfill(4)+".png")
-        ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
-        wif.Modified()
-        renWin.Render()
-        png.Write()
-        
-#dtheta = -0.45 * 2 * math.pi / 300
 dtheta = -0.45 * math.pi / 300
 theta = 0.3
 
-animate_folding = False
-save_folding = False
-if draw_folding and animate_folding:
-    N = 300
-    R = 1
-    iFrame = 0
-    wif = vtk.vtkWindowToImageFilter()
-    wif.SetInput(renWin)
-    png = vtk.vtkPNGWriter()
-    png.SetInputConnection(wif.GetOutputPort())
-    sequence = (range(N+1) + range(N+1)[::-1])*R + range(N+1) + [N]*3*N
-    for iFold in sequence:
-        theta = theta + dtheta
-        iFrame = iFrame + 1
-        u = iFold / float(N)
-        for iFoldingPoint in range( folding.GetPoints().GetNumberOfPoints() ):
-            if False:
-                folding.GetPoints().SetPoint( iFoldingPoint, lerp( folding_on_plane.GetPoint( iFoldingPoint ), folding_on_surface.GetPoint( iFoldingPoint ), easing( u ) ) )
-            else:
-                a = folding_on_plane.GetPoint( iFoldingPoint );
-                c = folding_on_surface.GetPoint( iFoldingPoint );
-                b = ( a[0], a[1], c[2] );
-                folding.GetPoints().SetPoint( iFoldingPoint, bezier( a, b, c, easing( u ) ) );
-        ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
-        ren.ResetCameraClippingRange()
-        png.SetFileName("test"+str(iFrame).zfill(4)+".png")
-        folding.Modified()
-        boundary.Modified()
-        wif.Modified()
-        renWin.Render()
-        if save_folding:
-            png.Write()
-            
-animate_probe = False
-if animate_probe:
-    foldingActor.GetProperty().SetOpacity(0.6)
-    locator = vtk.vtkCellLocator()
-    locator.SetDataSet( folding_on_plane )
-    locator.BuildLocator()
-    probe_on_plane = vtk.vtkSphereSource()
-    probe_on_plane.SetRadius(0.05)
-    probe_on_plane_mapper = vtk.vtkPolyDataMapper()
-    probe_on_plane_mapper.SetInputConnection( probe_on_plane.GetOutputPort() )
-    probe_on_plane_actor = vtk.vtkActor()
-    probe_on_plane_actor.SetMapper( probe_on_plane_mapper )
-    ren.AddActor( probe_on_plane_actor )
-    probe_on_surface_actor = vtk.vtkActor()
-    probe_on_surface_actor.SetMapper( probe_on_plane_mapper )
-    ren.AddActor( probe_on_surface_actor )
-    a = all_verts[0]
-    b = all_verts[0]
-    N = 5000
-    speed = 0.003
-    da = mul( [1,0,0], speed )
-    for iFrame in range(N):
-        new_a = add( a, da )
-        cell_id = vtk.mutable(0)
-        sub_id = vtk.mutable(0)
-        d2 = vtk.mutable(0.0)
-        cell = vtk.vtkGenericCell()
-        found = locator.FindClosestPointWithinRadius( new_a, 0.01, b, cell, cell_id, sub_id, d2 )
-        if found: 
-            a = new_a
-            probe_on_plane_actor.SetPosition( a )
-            probe_on_surface_actor.SetPosition( getPointOnOtherMesh( folding_on_plane, locator, folding_on_surface, b ) )
-        else:
-            psi = random.random()*2*math.pi
-            da = mul( [ math.cos(psi), math.sin(psi), 0 ], speed )
-        theta = theta + dtheta
-        ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
-        ren.ResetCameraClippingRange()
-        renWin.Render()
-        
-def getNeighborhoodConnections( m ):
-    '''Return a list of 2-tuples: connected-vertices and next-connected vertices.'''
-    connections = []
-    for iPt in range( m.GetNumberOfPoints() ):
-        connected = GetConnectedVertices( m, iPt )
-        next_connected = set()
-        for iPt2 in connected:
-            next_connected.update( GetConnectedVertices( m, iPt2 ) )
-        next_connected.discard( iPt )
-        connections.append( (connected,next_connected) )
-    return connections
-    
 def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
     '''Apply one iteration of spring forces to make every edge approach rest_length. Returns the total distance of vertices moved.'''
     total_move = 0
@@ -640,9 +506,8 @@ def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
         for iPt2 in next_connected:
             p2 = m.GetPoint( iPt2 )
             d = mag( sub( p, p2 ) )
-            if True:#d < 8 * rest_length:
-                f = mul( norm( sub( p, p2 ) ), k2 )
-                velocity[iPt] = add( velocity[iPt], f )
+            f = mul( norm( sub( p, p2 ) ), k2 )
+            velocity[iPt] = add( velocity[iPt], f )
     for iPt in range( m.GetNumberOfPoints() ):
         speed = mag( velocity[iPt] ) 
         velocity[iPt] = mul( velocity[iPt], k3 )
@@ -657,42 +522,15 @@ def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
         
 relax = True
 if relax:
-    N = 400 # frames in the relaxation phases
-    #M = 100 # frames in the linear interpolation phases
-    M = 0 # frames in the linear interpolation phases
-    animation = [ vtk.vtkPoints() for i in range(M+N+M+N) ]
-    # relax from plane
-    folding.GetPoints().DeepCopy( folding_on_plane.GetPoints() )
-    connections = getNeighborhoodConnections( folding )
-    if False:
-        # phase 1: apply a manual ruffle
-        for iFrame in range( M ):
-            print 'Phase 1, frame',iFrame
-            folding.GetPoints().DeepCopy( folding_on_plane.GetPoints() )
-            for iPt in range( folding.GetNumberOfPoints() ):
-                p = list( folding.GetPoint( iPt ) )
-                v = sub( p, folding_on_plane.GetPoint(0) )
-                p[2] = p[2] + 0.1 * mag(v) * math.cos( 0.3 + 3.0 * math.atan2( v[1], v[0] ) ) * iFrame / M + 0.3  * iFrame / M
-                folding.GetPoints().SetPoint( iPt, p )
-            animation[ iFrame ].DeepCopy( folding.GetPoints() )
-        # phase 2: relax from there
-        velocity = [ [0,0,0] for i in range( folding.GetNumberOfPoints() ) ]
-        for iFrame in range( N ):
-            print 'Phase 2, frame',iFrame
-            total_move = 0
-            average_move = 0
-            n_subframes = 0
-            while n_subframes < 10 and average_move < 1e-04: # (attempt to keep the speed approximately constant)
-                total_move = total_move + relaxUniformMesh( folding, 0.1, 0.002, velocity, connections )
-                average_move = total_move / folding.GetNumberOfPoints()
-                n_subframes = n_subframes + 1
-            animation[ M + iFrame ].DeepCopy( folding.GetPoints() )
-    # phase 4: relax from surface and store in reverse order
+    N = 400 # frames in the relaxation phase
+    M = 150 # frames in the linear phase
+    animation = [ vtk.vtkPoints() for i in range(M+N) ]
+    # relax from surface and store in reverse order
     folding.SetPoints( folding_on_surface.GetPoints() )
     connections = getNeighborhoodConnections( folding )
     velocity = [ [0,0,0] for i in range( folding.GetNumberOfPoints() ) ]
     for iFrame in range( N ):
-        print 'Phase 4, frame',iFrame
+        print 'Relaxing, frame',iFrame
         total_move = 0
         average_move = 0
         n_subframes = 0
@@ -700,23 +538,14 @@ if relax:
             total_move = total_move + relaxUniformMesh( folding, 0.1, 0.005, velocity, connections )
             average_move = total_move / folding.GetNumberOfPoints()
             n_subframes = n_subframes + 1
-        animation[ M+N+M+N - 1 - iFrame ].DeepCopy( folding.GetPoints() )
-    if False:
-        # phase 3: linearly interpolate between the two relaxation endpoints
-        for iFrame in range( M ):
-            print 'Phase 3, frame',iFrame
-            u = iFrame / float( M )
-            for iFoldingPoint in range( folding.GetNumberOfPoints() ):
-                folding.GetPoints().SetPoint( iFoldingPoint, lerp( animation[M+N-1].GetPoint( iFoldingPoint ), animation[M+N+M].GetPoint( iFoldingPoint ), u ) )
-            animation[ M+N+iFrame ].DeepCopy( folding.GetPoints() )
-    else:
-        # phase 3: linearly interpolate between start and the relaxed surface
-        for iFrame in range( M+N+M ):
-            print 'Phase 3, frame',iFrame
-            u = iFrame / float( M+N+M )
-            for iFoldingPoint in range( folding.GetNumberOfPoints() ):
-                folding.GetPoints().SetPoint( iFoldingPoint, lerp( folding_on_plane.GetPoint( iFoldingPoint ), animation[M+N+M].GetPoint( iFoldingPoint ), u ) )
-            animation[ iFrame ].DeepCopy( folding.GetPoints() )
+        animation[ M+N - 1 - iFrame ].DeepCopy( folding.GetPoints() )
+    # linearly interpolate between start and the relaxed surface
+    for iFrame in range( M ):
+        print 'Interpolating, frame',iFrame
+        u = iFrame / float( M )
+        for iFoldingPoint in range( folding.GetNumberOfPoints() ):
+            folding.GetPoints().SetPoint( iFoldingPoint, lerp( folding_on_plane.GetPoint( iFoldingPoint ), animation[M].GetPoint( iFoldingPoint ), u ) )
+        animation[ iFrame ].DeepCopy( folding.GetPoints() )
     # then animate the whole thing
     wif = vtk.vtkWindowToImageFilter()
     wif.SetInput(renWin)
@@ -731,6 +560,6 @@ if relax:
         renWin.Render()
         png.SetFileName("test"+str(iFrame).zfill(4)+".png")
         wif.Modified()
-        png.Write()
+        #png.Write()
 
 iren.Start()

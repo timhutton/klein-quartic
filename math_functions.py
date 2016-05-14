@@ -245,3 +245,15 @@ def GetConnectedVertices( mesh, iPt ):
             elif pointIdList.GetId(1) == iPt:
                 connectedVertices.add( int( pointIdList.GetId(0) ) )
     return list( connectedVertices )
+
+def getNeighborhoodConnections( m ):
+    '''Return a list of 2-tuples: connected-vertices and next-connected vertices.'''
+    connections = []
+    for iPt in range( m.GetNumberOfPoints() ):
+        connected = GetConnectedVertices( m, iPt )
+        next_connected = set()
+        for iPt2 in connected:
+            next_connected.update( GetConnectedVertices( m, iPt2 ) )
+        next_connected.discard( iPt )
+        connections.append( (connected,next_connected) )
+    return connections
