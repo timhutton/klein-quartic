@@ -547,25 +547,108 @@ def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
         total_move = total_move + speed
     m.Modified()
     return total_move
+    
+def relaxMesh( m, rest_lengths, max_speed, velocity, connections ):
+    '''Apply one iteration of spring forces to make every edge approach its rest_length. Returns the total distance of vertices moved.'''
+    total_move = 0
+    k1 = 0.3     # spring constant for neighbors
+    k2 = 0.01    # magnitude of next-neighbor repulsion
+    k3 = 0.9     # damping
+    for iPt in range( m.GetNumberOfPoints() ):
+        connected, next_connected = connections[ iPt ]
+        p = m.GetPoint( iPt )
+        # for each neighbor, add its spring forces on this vertex
+        for iPt2 in connected:
+            p2 = m.GetPoint( iPt2 )
+            d = mag( sub( p, p2 ) )
+            f = mul( norm( sub( p, p2 ) ), k1*( rest_lengths[(iPt,iPt2)] - d ) )
+            velocity[iPt] = add( velocity[iPt], f )
+        # add a weak repulsion from the next neighbors
+        for iPt2 in next_connected:
+            p2 = m.GetPoint( iPt2 )
+            d = mag( sub( p, p2 ) )
+            f = mul( norm( sub( p, p2 ) ), k2 )
+            velocity[iPt] = add( velocity[iPt], f )
+    for iPt in range( m.GetNumberOfPoints() ):
+        speed = mag( velocity[iPt] ) 
+        velocity[iPt] = mul( velocity[iPt], k3 )
+        if speed > max_speed:
+            velocity[iPt] = mul( velocity[iPt], max_speed / speed )
+        p = m.GetPoint( iPt )
+        p = add( p, velocity[iPt] )
+        m.GetPoints().SetPoint( iPt, p )
+        total_move = total_move + speed
+    m.Modified()
+    return total_move
+    
+def addConnections( connections, folding_to_kq, kq_joiners ):
+    for iKQPt in kq_joiners:
+        folding_points = kq_to_folding[ iKQPt ]
+        # merge all the folding_points entries in connections
+        conns = set()
+        next_conns = set()
+        for iFoldingPt in folding_points:
+            a,b = connections[ iFoldingPt ]
+            conns.update( a )
+            next_conns.update( b )
+        for iFoldingPt in folding_points:
+            connections[ iFoldingPt ] = ( conns, next_conns )
+            
+def getRestLengths( mesh, connections ):
+    rest_lengths = {}
+    for iPt in range( mesh.GetNumberOfPoints() ):
+        connected, _ = connections[ iPt ]
+        p = mesh.GetPoint( iPt )
+        for iPt2 in connected:
+            p2 = mesh.GetPoint( iPt2 )
+            d = mag( sub( p, p2 ) ) / 1.5 # hack!
+            rest_lengths[(iPt,iPt2)] = d
+            rest_lengths[(iPt2,iPt)] = d
+    return rest_lengths
+    
+def getCentroid( mesh ):
+    centroid = [0,0,0]
+    for iPt in range( mesh.GetNumberOfPoints() ):
+        centroid = add( centroid, mesh.GetPoint( iPt ) )
+    return mul( centroid, 1.0 / mesh.GetNumberOfPoints() )
+    
+def moveCentroidTo( mesh, p ):
+    centroid = getCentroid( mesh )
+    for iPt in range( mesh.GetNumberOfPoints() ):
+        mesh.GetPoints().SetPoint( iPt, add( mesh.GetPoint( iPt ), sub( p, centroid ) ) )
         
 relax = True
 if relax:
-    N = 400 # frames in the relaxation phase
-    M = 150 # frames in the linear phase
-    animation = [ vtk.vtkPoints() for i in range(M+N) ]
+    kq_centroid = getCentroid( folding_on_surface )
     # relax from surface and store in reverse order
     folding.SetPoints( folding_on_surface.GetPoints() )
-    connections = getNeighborhoodConnections( folding )
+    animation_sequence =  [ ( folding_on_surface,[4,20,12,28,19,11,27],300 ),
+                            ( folding_on_surface,[4,20,12,28],200 ),
+                            ( folding_on_surface,[4],150 ),
+                            ( folding_on_surface,[],100 ),
+                            ( folding_on_plane,[],100 ) ]
+    N = sum( c for a,b,c in animation_sequence )  # frames in the relaxation phase
+    M = 150 # frames in the linear phase
+    animation = [ vtk.vtkPoints() for i in range(M+N) ]
+    iCurrentFrame = len( animation ) - 1
     velocity = [ [0,0,0] for i in range( folding.GetNumberOfPoints() ) ]
-    for iFrame in range( N ):
-        total_move = 0
-        average_move = 0
-        n_subframes = 0
-        while n_subframes < 10 and average_move < 1e-03: # (attempt to keep the speed approximately constant)
-            total_move = total_move + relaxUniformMesh( folding, 0.1, 0.005, velocity, connections )
-            average_move = total_move / folding.GetNumberOfPoints()
-            n_subframes = n_subframes + 1
-        animation[ M+N-1-iFrame ].DeepCopy( folding.GetPoints() )
+    for rest_length_source, kq_joiners, num_frames in animation_sequence:
+        connections = getNeighborhoodConnections( folding )
+        addConnections( connections, folding_to_kq, kq_joiners )
+        rest_lengths = getRestLengths( rest_length_source, connections )
+        for iFrame in range( num_frames ):
+            total_move = 0
+            average_move = 0
+            n_subframes = 0
+            while n_subframes < 10 and average_move < 1e-03: # (attempt to keep the speed approximately constant)
+                #total_move = total_move + relaxUniformMesh( folding, 0.1, 0.005, velocity, connections )
+                total_move = total_move + relaxMesh( folding, rest_lengths, 0.005, velocity, connections )
+                average_move = total_move / folding.GetNumberOfPoints()
+                n_subframes = n_subframes + 1
+            moveCentroidTo( folding, kq_centroid )
+            animation[ iCurrentFrame ].DeepCopy( folding.GetPoints() )
+            iCurrentFrame = iCurrentFrame - 1
+            renWin.Render()
     # linearly interpolate between start and the relaxed surface
     for iFrame in range( M ):
         u = iFrame / float( M )
@@ -577,14 +660,14 @@ if relax:
     wif.SetInput(renWin)
     png = vtk.vtkPNGWriter()
     png.SetInputConnection(wif.GetOutputPort())
-    sequence = [animation[0]]*100 + animation + [animation[-1]]*100 + animation[::-1] + [animation[0]]*50 + animation + [animation[-1]] * N
+    sequence = [animation[0]]*100 + animation + [animation[-1]]*100 + animation[::-1] + [animation[0]]*50 + animation + [animation[-1]] * 400
     for iFrame,mesh_points in enumerate( sequence ):
         folding.GetPoints().DeepCopy( mesh_points )
         theta = theta + dtheta
         ren.GetActiveCamera().SetPosition( 6*math.cos(theta), 6*math.sin(theta), 3 )
         ren.ResetCameraClippingRange()
         renWin.Render()
-        png.SetFileName("test"+str(iFrame).zfill(4)+".png")
+        png.SetFileName("test"+str(iFrame).zfill(4)+".png") 
         wif.Modified()
         #png.Write()
 
