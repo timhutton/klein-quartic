@@ -191,6 +191,22 @@ if draw_surface:
     #surfaceActor.GetProperty().SetOpacity(0.7)
     ren.AddActor(surfaceActor)
 
+draw_smoothed_surface = False
+if draw_smoothed_surface:
+    subdiv = vtk.vtkLoopSubdivisionFilter()
+    subdiv.SetNumberOfSubdivisions(4)
+    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+        subdiv.SetInputData(surface)
+    else:
+        subdiv.SetInput(surface)
+    surfaceMapper = vtk.vtkPolyDataMapper()
+    surfaceMapper.SetInputConnection( subdiv.GetOutputPort() )
+    surfaceMapper.SetScalarRange(0,24)
+    surfaceMapper.SetLookupTable(lut)
+    surfaceActor = vtk.vtkActor()
+    surfaceActor.SetMapper(surfaceMapper)
+    ren.AddActor(surfaceActor)
+
 draw_edges = False
 if draw_edges:
     lines = vtk.vtkExtractEdges()
@@ -301,6 +317,7 @@ folding = vtk.vtkPolyData()
 folding_on_surface = vtk.vtkPolyData()
 folding_on_plane = vtk.vtkPolyData()
 foldingActor = vtk.vtkActor()
+folding_to_kq = {}
 if draw_folding:
     folding_pts_on_plane = vtk.vtkPoints()
     folding_pts_on_surface = vtk.vtkPoints()
@@ -322,6 +339,7 @@ if draw_folding:
                 folding_pts_on_plane.InsertNextPoint( on_plane )
                 folding_pts_on_surface.InsertNextPoint( surface.GetPoint( plane_to_kq[ iPtOnPlane ] ) )
             plane_to_folding[ int( iPtOnPlane ) ] = iPtOnFolding
+            folding_to_kq[ int( iPtOnFolding ) ] = plane_to_kq[ int( iPtOnPlane ) ]
     for iSurfacePoly in range( surface.GetNumberOfPolys() ):
         face_label = surface.GetCellData().GetScalars().GetTuple1( iSurfacePoly )
         iPlanePoly = [ i for i in range( plane.GetNumberOfPolys() ) if plane.GetCellData().GetScalars().GetTuple1( i ) == face_label ][0]
@@ -359,16 +377,25 @@ if draw_folding:
     #foldingActor.GetProperty().EdgeVisibilityOn()
     #foldingActor.GetProperty().SetOpacity(0.7)
     ren.AddActor( foldingActor )
+    
+kq_to_folding = [ [ a for a in folding_to_kq if folding_to_kq[a]==i ] for i in range( surface.GetNumberOfPoints() ) ]
+
+boundary_extractor = vtk.vtkFeatureEdges()
+boundary_extractor.FeatureEdgesOff()
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    boundary_extractor.SetInputData( folding )
+else:
+    boundary_extractor.SetInput( folding )
+boundary_extractor.Update()
+
+boundary_scalars = vtk.vtkIntArray()
+for iEdge in range( boundary_extractor.GetOutput().GetNumberOfCells() ):
+    boundary_scalars.InsertNextValue( iEdge )
+boundary_extractor.GetOutput().GetCellData().SetScalars( boundary_scalars )
 
 show_boundary = True
 boundary = vtk.vtkPolyData()
 if show_boundary:
-    boundary_extractor = vtk.vtkFeatureEdges()
-    boundary_extractor.FeatureEdgesOff()
-    if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
-        boundary_extractor.SetInputData( folding )
-    else:
-        boundary_extractor.SetInput( folding )
     boundary_tube = vtk.vtkTubeFilter()
     boundary_tube.SetInputConnection( boundary_extractor.GetOutputPort() )
     boundary_tube.SetRadius(0.007)
@@ -376,6 +403,7 @@ if show_boundary:
     boundary_tube.CappingOn()
     boundary_tubeMapper = vtk.vtkPolyDataMapper()
     boundary_tubeMapper.SetInputConnection( boundary_tube.GetOutputPort() )
+    boundary_tubeMapper.SetScalarRange(0,boundary_extractor.GetOutput().GetNumberOfCells())
     boundary_tubeMapper.ScalarVisibilityOff()
     boundary_tubeActor = vtk.vtkActor()
     boundary_tubeActor.SetMapper( boundary_tubeMapper )
@@ -530,7 +558,6 @@ if relax:
     connections = getNeighborhoodConnections( folding )
     velocity = [ [0,0,0] for i in range( folding.GetNumberOfPoints() ) ]
     for iFrame in range( N ):
-        print 'Relaxing, frame',iFrame
         total_move = 0
         average_move = 0
         n_subframes = 0
@@ -538,10 +565,9 @@ if relax:
             total_move = total_move + relaxUniformMesh( folding, 0.1, 0.005, velocity, connections )
             average_move = total_move / folding.GetNumberOfPoints()
             n_subframes = n_subframes + 1
-        animation[ M+N - 1 - iFrame ].DeepCopy( folding.GetPoints() )
+        animation[ M+N-1-iFrame ].DeepCopy( folding.GetPoints() )
     # linearly interpolate between start and the relaxed surface
     for iFrame in range( M ):
-        print 'Interpolating, frame',iFrame
         u = iFrame / float( M )
         for iFoldingPoint in range( folding.GetNumberOfPoints() ):
             folding.GetPoints().SetPoint( iFoldingPoint, lerp( folding_on_plane.GetPoint( iFoldingPoint ), animation[M].GetPoint( iFoldingPoint ), u ) )
