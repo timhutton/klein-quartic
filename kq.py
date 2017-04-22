@@ -133,7 +133,7 @@ if output_SVG:
     tabs={ 0:'AFD', 18:'AFD', 20:'AF', 4:'ECHGB', 11:'ECHGB', 12:'ECGB', 21:'AFD', 7:'AF', 23:'AF', 10:'ECHGB', 15:'ECGB', 17:'ECGB',
            1:'AFD', 19:'AFD',  8:'AF', 3:'ECHGB',  5:'ECHGB', 14:'ECGB',  2:'AFD', 6:'AF', 22:'AF',  9:'ECHGB', 13:'ECGB', 16:'ECGB' }
     for iPage,page in enumerate(pages):
-        with open('instructions_page'+str(iPage)+'.svg','w') as f:
+        with open('instructions_page'+str(iPage+1)+'.svg','w') as f:
             label_color = 'black' if SVG_with_color else 'rgb(200,200,200)'
             face_fill = 'rgb('+','.join(str(int(c*255)) for c in type_colors[iPage][:3])+')' if SVG_with_color else 'none'
             f.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
@@ -183,6 +183,11 @@ if output_SVG:
             f.write('  <text x="1010" y="320" class="label_left">ridge fold</text>\n')
             f.write('  <line x1="920" y1="350" x2="1000" y2="350" class="valley_fold" />\n')
             f.write('  <text x="1010" y="350" class="label_left">valley fold</text>\n')
+            f.write('  <text x="15" y="20" class="label_left">Page '+str(iPage+1)+' of '+str(len(pages))+'</text>\n')
+            f.write('  <text x="990" y="450" class="label_left">Papercraft</text>\n')
+            f.write('  <text x="990" y="470" class="label_left">Klein</text>\n')
+            f.write('  <text x="990" y="490" class="label_left">Quartic</text>\n')
+            f.write('  <text x="1130" y="450" class="label_left" writing-mode="tb-rl">http://github.com/timhutton/klein-quartic</text>\n')
             f.write('</svg>\n')
 
 # to check that all the heptagons of each type are congruent:
