@@ -17,6 +17,13 @@
     You should have received a copy of the GNU General Public License
     along with klein-quartic. If not, see <http://www.gnu.org/licenses/>.
 '''
+
+# -------------------------- user options -------------------------
+output_OBJ = False
+output_SVG = True
+SVG_with_color = False
+render_scene = False
+# -----------------------------------------------------------------
     
 try:
     import vtk
@@ -66,20 +73,18 @@ inner_faces = [ (4,12,13,14,18,19,20), (4,20,21,22,26,27,28), (4,28,29,30,10,11,
                 (5,9,8,15,42,43,44),   (5,44,45,46,34,35,36), (5,36,37,38,11,10,9), 
                 (6,17,16,23,35,34,33), (6,33,32,39,50,51,52), (6,52,53,54,19,18,17),
                 (7,25,24,31,51,50,49), (7,49,48,55,43,42,41), (7,41,40,47,27,26,25) ]
+
+# for better shape we move the tetrahedron vertices inwards
+corner_verts = [ mul(p,0.6) for p in tet_verts+inner_tet_verts ]
+all_verts = corner_verts + arm_sides 
                 
 def heptagon_as_tris( f ):
     '''Given a heptagon, return the desired triangles.'''
     ind = [ (2,3,1), (1,3,0), (0,3,4), (0,4,6), (6,4,5) ]
     return [ (f[t[0]],f[t[1]],f[t[2]]) for t in ind ]
     
-# for better shape we move the tetrahedron vertices inwards
-corner_verts = [ mul(p,0.6) for p in tet_verts+inner_tet_verts ]
-all_verts = corner_verts + arm_sides 
-
-outputOBJ( all_verts, outer_faces + inner_faces, 'kq.obj' ) # this one is 'correct' but has bent faces which most packages seem to find hard
-
 faces_as_tris = flatten( heptagon_as_tris(f) for f in outer_faces + inner_faces )
-outputOBJ( all_verts, faces_as_tris, 'kq_surface.obj' ) # this one has the wrong topology but is triangulated
+type_colors = [ (1,0.4,0.4,1), (0.4,0.4,1,1), (0.4,1,0.4,1), (1,1,0.4,1), (1,0.4,1,1), (0.4,1,1,1), (1,0.5,0,1), (0.6,0.6,0.6,1) ]
 
 def makeFlatHeptagon( verts, face ): 
     ''' Given a (bent) heptagon that can be triangulated as below, output a z=0 flat version.
@@ -109,68 +114,70 @@ def makeFlatHeptagon( verts, face ):
 # Compute flat versions of the two heptagons, for making the shape out of card.
 # For printing: load both into ParaView, and view in 2D mode, to get at same scale without distortion.
 flat_outer_verts,flat_outer_faces = makeFlatHeptagon( all_verts, outer_faces[0] )
-outputOBJ( flat_outer_verts, flat_outer_faces, 'flat_outer.obj' )
 flat_inner_verts,flat_inner_faces = makeFlatHeptagon( all_verts, inner_faces[0] )
-outputOBJ( flat_inner_verts, flat_inner_faces, 'flat_inner.obj' )
-# write to SVG:
-with_color = True
-type_colors = [ (1,0.4,0.4,1), (0.4,0.4,1,1), (0.4,1,0.4,1), (1,1,0.4,1), (1,0.4,1,1), (0.4,1,1,1), (1,0.5,0,1), (0.6,0.6,0.6,1) ]
-pages = [(0,19,21),(1,20,22),(2,18,23),(3,14,16),(4,12,17),(5,13,15),(6,7,8),(9,10,11)] # which face do we put on each page (to get the right colors)
-face_type = [1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1] # 0=inner, 1=outer
-internal_folds = [(1,3),(3,0),(0,4),(4,6)] # indices of heptagon vertices
-internal_fold_types = [[0,1,1,1],[0,1,0,0]] # 0=mountain, 1=valley; for inner and outer triangles
-edge_labels=['AFECHGB','AFGCDEB'] # for inner and outer triangles
-flat_inner_verts = [(y,1.2-x,z) for (x,y,z) in flat_inner_verts]
-for iPage,page in enumerate(pages):
-    with open('instructions_page'+str(iPage)+'.svg','w') as f:
-        f.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
-        f.write('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">\n')
-        f.write('  <style>\n')
-        f.write('    .label_left { font-family: arial, sans-serif; font-size:18px; fill:rgb(200,200,200); text-anchor: left; dominant-baseline: central }\n')
-        f.write('    .label { font-family: arial, sans-serif; font-size:18px; fill:rgb(200,200,200); text-anchor: middle; dominant-baseline: central }\n')
-        f.write('    .edge { stroke: black; stroke-width: 1 }\n')
-        f.write('    .mountain_fold { stroke: rgb(200,200,200); stroke-width: 1; stroke-dasharray: 2,5,10,5 }\n')
-        f.write('    .valley_fold { stroke: rgb(200,200,200); stroke-width: 1; stroke-dasharray: 5,5 }\n')
-        f.write('  </style>\n')
-        for iiFace,iFace in enumerate(page):
-            x_offset = 150 + 300 * iiFace 
-            y_offset = 600
-            scale = 400
-            this_face_type = face_type[iFace]
-            verts = [ (x*scale+x_offset,y_offset-y*scale) for (x,y,z) in [flat_inner_verts,flat_outer_verts][this_face_type] ]
-            if with_color:
-                f.write('  <polygon points="')
-                f.write(' '.join(str(x)+' '+str(y) for (x,y) in verts))
-                f.write('" stroke="none" fill="rgb('+','.join(str(int(c*255)) for c in type_colors[iPage][:3])+')" />\n')
-            for iFold,fold in enumerate(internal_folds):
-                p = [verts[fold[0]],verts[fold[1]]]
-                f.write('  <line x1="'+str(p[0][0])+'" y1="'+str(p[0][1])+'" x2="'+str(p[1][0])+'" y2="'+str(p[1][1])
-                    +'" class="'+['mountain_fold','valley_fold'][internal_fold_types[this_face_type][iFold]]+'" />\n')
-            text_x = sum(verts[i][0] for i in [0,3,4])/3 
-            text_y = sum(verts[i][1] for i in [0,3,4])/3 
-            f.write('  <text x="'+str(text_x)+'" y="'+str(text_y)+'" class="label">'+str(iFace)+'</text>\n')
-            for iEdge in range(len(verts)):
-                p1 = verts[iEdge]
-                p2 = verts[(iEdge+1)%len(verts)]
-                normal = norm(rotateXY90acw(sub(p1,p2)))
-                text_loc = add(av(p1,p2),mul(normal,15))
-                f.write('  <line x1="'+str(p1[0])+'" y1="'+str(p1[1])+'" x2="'+str(p2[0])+'" y2="'+str(p2[1])+'" class="edge" />\n')
-                f.write('  <text x="'+str(text_loc[0])+'" y="'+str(text_loc[1])+'" class="label">'+edge_labels[this_face_type][iEdge]+'</text>\n')                
-        f.write('  <line x1="820" y1="20" x2="900" y2="20" class="mountain_fold" />\n')
-        f.write('  <text x="910" y="20" class="label_left">mountain fold</text>\n')
-        f.write('  <line x1="820" y1="50" x2="900" y2="50" class="valley_fold" />\n')
-        f.write('  <text x="910" y="50" class="label_left">valley fold</text>\n')
-        f.write('</svg>\n')
+
+if output_OBJ:
+    outputOBJ( all_verts, outer_faces + inner_faces, 'kq.obj' ) # this one is 'correct' but has bent faces which most packages seem to find hard
+    outputOBJ( all_verts, faces_as_tris, 'kq_surface.obj' ) # this one has the wrong topology but is triangulated
+    outputOBJ( flat_outer_verts, flat_outer_faces, 'flat_outer.obj' )
+    outputOBJ( flat_inner_verts, flat_inner_faces, 'flat_inner.obj' )
+
+if output_SVG:
+    pages = [(0,19,21),(1,20,22),(2,18,23),(3,14,16),(4,12,17),(5,13,15),(6,7,8),(9,10,11)] # which face do we put on each page (to get the right colors)
+    face_type = [1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1] # 0=inner, 1=outer
+    internal_folds = [(1,3),(3,0),(0,4),(4,6)] # indices of heptagon vertices
+    internal_fold_types = [[0,1,1,1],[0,1,0,0]] # 0=mountain, 1=valley; for inner and outer triangles
+    edge_labels=['AFECHGB','AFGCDEB'] # for inner and outer triangles
+    flat_inner_verts = [(y,1.2-x,z) for (x,y,z) in flat_inner_verts]
+    for iPage,page in enumerate(pages):
+        with open('instructions_page'+str(iPage)+'.svg','w') as f:
+            f.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
+            f.write('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">\n')
+            f.write('  <style>\n')
+            f.write('    .label_left { font-family: arial, sans-serif; font-size:18px; fill:rgb(200,200,200); text-anchor: left; dominant-baseline: central }\n')
+            f.write('    .label { font-family: arial, sans-serif; font-size:18px; fill:rgb(200,200,200); text-anchor: middle; dominant-baseline: central }\n')
+            f.write('    .edge { stroke: black; stroke-width: 1 }\n')
+            f.write('    .mountain_fold { stroke: rgb(200,200,200); stroke-width: 1; stroke-dasharray: 2,5,10,5 }\n')
+            f.write('    .valley_fold { stroke: rgb(200,200,200); stroke-width: 1; stroke-dasharray: 5,5 }\n')
+            f.write('  </style>\n')
+            for iiFace,iFace in enumerate(page):
+                x_offset = 150 + 300 * iiFace 
+                y_offset = 600
+                scale = 400
+                this_face_type = face_type[iFace]
+                verts = [ (x*scale+x_offset,y_offset-y*scale) for (x,y,z) in [flat_inner_verts,flat_outer_verts][this_face_type] ]
+                if SVG_with_color:
+                    f.write('  <polygon points="'+' '.join(str(x)+' '+str(y) for (x,y) in verts))
+                    f.write('" stroke="none" fill="rgb('+','.join(str(int(c*255)) for c in type_colors[iPage][:3])+')" />\n')
+                for iFold,fold in enumerate(internal_folds):
+                    p = [verts[fold[0]],verts[fold[1]]]
+                    f.write('  <line x1="'+str(p[0][0])+'" y1="'+str(p[0][1])+'" x2="'+str(p[1][0])+'" y2="'+str(p[1][1])
+                        +'" class="'+['mountain_fold','valley_fold'][internal_fold_types[this_face_type][iFold]]+'" />\n')
+                text_x = sum(verts[i][0] for i in [0,3,4])/3 
+                text_y = sum(verts[i][1] for i in [0,3,4])/3 
+                f.write('  <text x="'+str(text_x)+'" y="'+str(text_y)+'" class="label">'+str(iFace)+'</text>\n')
+                for iEdge in range(len(verts)):
+                    p1 = verts[iEdge]
+                    p2 = verts[(iEdge+1)%len(verts)]
+                    normal = norm(rotateXY90acw(sub(p1,p2)))
+                    text_loc = add(av(p1,p2),mul(normal,15))
+                    f.write('  <line x1="'+str(p1[0])+'" y1="'+str(p1[1])+'" x2="'+str(p2[0])+'" y2="'+str(p2[1])+'" class="edge" />\n')
+                    f.write('  <text x="'+str(text_loc[0])+'" y="'+str(text_loc[1])+'" class="label">'+edge_labels[this_face_type][iEdge]+'</text>\n')                
+            f.write('  <line x1="820" y1="20" x2="900" y2="20" class="mountain_fold" />\n')
+            f.write('  <text x="910" y="20" class="label_left">mountain fold</text>\n')
+            f.write('  <line x1="820" y1="50" x2="900" y2="50" class="valley_fold" />\n')
+            f.write('  <text x="910" y="50" class="label_left">valley fold</text>\n')
+            f.write('</svg>\n')
 
 # to check that all the heptagons of each type are congruent:
 #for i,f in enumerate( outer_faces + inner_faces ):
 #    outputOBJ( *makeFlatHeptagon( all_verts, f ), filename = 'flat_'+str(i)+'.obj' )
 
-exit()
+if not render_scene:
+    exit()
 
 # ------ visualise with VTK --------
     
-
 print
 print '             Left drag : rotate'
 print '     Shift + Left drag : pan'
@@ -347,7 +354,8 @@ for iFace in range(plane.GetNumberOfPolys()):
         iv = iverts.GetId(iiv)
         face += [ iv ]
     faces += [ face ]
-outputOBJ( verts, faces, 'plane.obj' )
+if output_OBJ:
+    outputOBJ( verts, faces, 'plane.obj' )
 
 # correspond the vertices
 plane_to_kq = { 0:0,1:8,2:15,3:14,4:18,5:17,6:16,7:9,8:10,9:30,10:31,11:24,12:25,13:26,
@@ -368,6 +376,7 @@ folding_on_surface = vtk.vtkPolyData()
 folding_on_plane = vtk.vtkPolyData()
 foldingActor = vtk.vtkActor()
 folding_to_kq = {}
+smooth_normals = True
 if draw_folding:
     folding_pts_on_plane = vtk.vtkPoints()
     folding_pts_on_surface = vtk.vtkPoints()
@@ -416,12 +425,15 @@ if draw_folding:
     foldingMapper = vtk.vtkPolyDataMapper()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
         foldingNormals.SetInputData( folding )
-        foldingMapper.SetInputData( folding )
+        if not smooth_normals:
+            foldingMapper.SetInputData( folding )
     else:
         foldingNormals.SetInput( folding )
-        foldingMapper.SetInput( folding )
+        if not smooth_normals:
+            foldingMapper.SetInput( folding )
     foldingNormals.SplittingOff()
-    #foldingMapper.SetInputConnection( foldingNormals.GetOutputPort() )
+    if smooth_normals:
+        foldingMapper.SetInputConnection( foldingNormals.GetOutputPort() )
     foldingMapper.SetScalarRange(0,24)
     foldingMapper.SetLookupTable(lut)
     foldingMapper.SetScalarModeToUseCellData()
