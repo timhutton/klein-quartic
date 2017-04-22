@@ -128,27 +128,32 @@ if output_SVG:
     internal_folds = [(1,3),(3,0),(0,4),(4,6)] # indices of heptagon vertices
     internal_fold_types = [[0,1,1,1],[0,1,0,0]] # 0=mountain, 1=valley; for inner and outer triangles
     edge_labels=['AFECHGB','AFGCDEB'] # for inner and outer triangles
-    flat_inner_verts = [(y,1.2-x,z) for (x,y,z) in flat_inner_verts]
+    flat_inner_verts = [(y,-x,z) for (x,y,z) in flat_inner_verts]
+    flat_outer_verts = [(0.5-x,-0.05-y,z) for (x,y,z) in flat_outer_verts]
+    tabs={ 0:'AFD', 18:'AFD', 20:'AF', 4:'ECHGB', 11:'ECHGB', 12:'ECGB', 21:'AFD', 7:'AF', 23:'AF', 10:'ECHGB', 15:'ECGB', 17:'ECGB',
+           1:'AFD', 19:'AFD',  8:'AF', 3:'ECHGB',  5:'ECHGB', 14:'ECGB',  2:'AFD', 6:'AF', 22:'AF',  9:'ECHGB', 13:'ECGB', 16:'ECGB' }
     for iPage,page in enumerate(pages):
         with open('instructions_page'+str(iPage)+'.svg','w') as f:
+            label_color = 'black' if SVG_with_color else 'rgb(200,200,200)'
+            face_fill = 'rgb('+','.join(str(int(c*255)) for c in type_colors[iPage][:3])+')' if SVG_with_color else 'none'
             f.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
-            f.write('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">\n')
+            f.write('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1150" height="813">\n')
             f.write('  <style>\n')
-            f.write('    .label_left { font-family: arial, sans-serif; font-size:18px; fill:rgb(200,200,200); text-anchor: left; dominant-baseline: central }\n')
-            f.write('    .label { font-family: arial, sans-serif; font-size:18px; fill:rgb(200,200,200); text-anchor: middle; dominant-baseline: central }\n')
-            f.write('    .edge { stroke: black; stroke-width: 1 }\n')
-            f.write('    .mountain_fold { stroke: rgb(200,200,200); stroke-width: 1; stroke-dasharray: 2,5,10,5 }\n')
-            f.write('    .valley_fold { stroke: rgb(200,200,200); stroke-width: 1; stroke-dasharray: 5,5 }\n')
+            f.write('    .label_left { font-family: arial, sans-serif; font-size:18px; fill:'+label_color+'; text-anchor: left; dominant-baseline: central }\n')
+            f.write('    .label { font-family: arial, sans-serif; font-size:14px; fill:'+label_color+'; text-anchor: middle; dominant-baseline: central }\n')
+            f.write('    .edge { stroke: black; stroke-width: 1; fill:'+face_fill+' }\n')
+            f.write('    .mountain_fold { stroke: '+label_color+'; stroke-width: 1; stroke-dasharray: 2,5,10,5 }\n')
+            f.write('    .valley_fold { stroke: '+label_color+'; stroke-width: 1; stroke-dasharray: 5,5 }\n')
             f.write('  </style>\n')
+            f.write('  <rect x="1" y="1" width="1149" height="812" fill="none" stroke="black" stroke-width="1"/>\n')
             for iiFace,iFace in enumerate(page):
-                x_offset = 150 + 300 * iiFace 
-                y_offset = 600
-                scale = 400
+                x_offset = 130 + 300 * iiFace 
+                y_offset = 30
+                scale = 600
                 this_face_type = face_type[iFace]
                 verts = [ (x*scale+x_offset,y_offset-y*scale) for (x,y,z) in [flat_inner_verts,flat_outer_verts][this_face_type] ]
                 if SVG_with_color:
-                    f.write('  <polygon points="'+' '.join(str(x)+' '+str(y) for (x,y) in verts))
-                    f.write('" stroke="none" fill="rgb('+','.join(str(int(c*255)) for c in type_colors[iPage][:3])+')" />\n')
+                    f.write('  <polygon points="'+' '.join(str(x)+' '+str(y) for (x,y) in verts)+'" stroke="none" fill="'+face_fill+'" />\n')
                 for iFold,fold in enumerate(internal_folds):
                     p = [verts[fold[0]],verts[fold[1]]]
                     f.write('  <line x1="'+str(p[0][0])+'" y1="'+str(p[0][1])+'" x2="'+str(p[1][0])+'" y2="'+str(p[1][1])
@@ -157,16 +162,27 @@ if output_SVG:
                 text_y = sum(verts[i][1] for i in [0,3,4])/3 
                 f.write('  <text x="'+str(text_x)+'" y="'+str(text_y)+'" class="label">'+str(iFace)+'</text>\n')
                 for iEdge in range(len(verts)):
+                    edge_label = edge_labels[this_face_type][iEdge]
                     p1 = verts[iEdge]
                     p2 = verts[(iEdge+1)%len(verts)]
                     normal = norm(rotateXY90acw(sub(p1,p2)))
-                    text_loc = add(av(p1,p2),mul(normal,15))
-                    f.write('  <line x1="'+str(p1[0])+'" y1="'+str(p1[1])+'" x2="'+str(p2[0])+'" y2="'+str(p2[1])+'" class="edge" />\n')
-                    f.write('  <text x="'+str(text_loc[0])+'" y="'+str(text_loc[1])+'" class="label">'+edge_labels[this_face_type][iEdge]+'</text>\n')                
-            f.write('  <line x1="820" y1="20" x2="900" y2="20" class="mountain_fold" />\n')
-            f.write('  <text x="910" y="20" class="label_left">mountain fold</text>\n')
-            f.write('  <line x1="820" y1="50" x2="900" y2="50" class="valley_fold" />\n')
-            f.write('  <text x="910" y="50" class="label_left">valley fold</text>\n')
+                    tangent = norm(sub(p2,p1))
+                    tab_width = 20
+                    if edge_label in tabs[iFace]:
+                        f.write('  <line x1="'+str(p1[0])+'" y1="'+str(p1[1])+'" x2="'+str(p2[0])+'" y2="'+str(p2[1])+'" class="mountain_fold" />\n')
+                        text_loc = add(av(p1,p2),mul(normal,tab_width/2))
+                        t1 = add(add(p1,mul(tangent,tab_width*3)),mul(normal,tab_width))
+                        t2 = add(sub(p2,mul(tangent,tab_width*3)),mul(normal,tab_width))
+                        seq = [p1,t1,t2,p2]
+                        f.write('  <polyline points="'+' '.join(map(str,flatten(seq)))+'" class="edge" />\n')
+                    else:
+                        f.write('  <line x1="'+str(p1[0])+'" y1="'+str(p1[1])+'" x2="'+str(p2[0])+'" y2="'+str(p2[1])+'" class="edge" />\n')
+                        text_loc = add(av(p1,p2),mul(normal,-tab_width/2))
+                    f.write('  <text x="'+str(text_loc[0])+'" y="'+str(text_loc[1])+'" class="label">'+edge_label+'</text>\n')                
+            f.write('  <line x1="920" y1="320" x2="1000" y2="320" class="mountain_fold" />\n')
+            f.write('  <text x="1010" y="320" class="label_left">ridge fold</text>\n')
+            f.write('  <line x1="920" y1="350" x2="1000" y2="350" class="valley_fold" />\n')
+            f.write('  <text x="1010" y="350" class="label_left">valley fold</text>\n')
             f.write('</svg>\n')
 
 # to check that all the heptagons of each type are congruent:
