@@ -20,9 +20,19 @@
 
 # -------------------------- user options -------------------------
 output_OBJ = False
-output_SVG = True
+output_SVG = False
 SVG_with_color = False
-render_scene = False
+render_scene = True
+draw_plane = True
+draw_folding = True
+smooth_normals = True
+show_boundary = True
+label_faces = False
+label_points = False
+label_face_ids = False
+draw_petrie_polygons = False
+relax = True
+save_animated_PNG = False
 # -----------------------------------------------------------------
     
 try:
@@ -343,7 +353,6 @@ for i in range( plane.GetNumberOfPolys() ):
     plane_scalars.SetValue( i, plane_ids[ i ] if i in plane_ids else 200+i )
 plane.GetCellData().SetScalars( plane_scalars )
 
-draw_plane = False
 if draw_plane:
     planeMapper = vtk.vtkPolyDataMapper()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
@@ -391,13 +400,11 @@ plane_to_kq = { 0:0,1:8,2:15,3:14,4:18,5:17,6:16,7:9,8:10,9:30,10:31,11:24,12:25
                 126:39,127:32,128:1,129:13,130:38,134:27,135:47,136:46,137:45,142:46,143:34,144:33,
                 163:49,164:50,165:39,201:55,202:43,203:44 }
 
-draw_folding = True
 folding = vtk.vtkPolyData()
 folding_on_surface = vtk.vtkPolyData()
 folding_on_plane = vtk.vtkPolyData()
 foldingActor = vtk.vtkActor()
 folding_to_kq = {}
-smooth_normals = True
 if draw_folding:
     folding_pts_on_plane = vtk.vtkPoints()
     folding_pts_on_surface = vtk.vtkPoints()
@@ -478,7 +485,6 @@ for iEdge in range( boundary_extractor.GetOutput().GetNumberOfCells() ):
     boundary_scalars.InsertNextValue( iEdge )
 boundary_extractor.GetOutput().GetCellData().SetScalars( boundary_scalars )
 
-show_boundary = True
 boundary = vtk.vtkPolyData()
 if show_boundary:
     boundary_tube = vtk.vtkTubeFilter()
@@ -495,9 +501,6 @@ if show_boundary:
     boundary_tubeActor.GetProperty().SetColor(0,0,0)
     ren.AddActor( boundary_tubeActor )
 
-label_faces = True
-label_points = False
-label_face_ids = False
 sources = [ ]
 if draw_folding: sources.append( folding )
 if draw_plane: sources.append( plane )
@@ -556,7 +559,6 @@ for source in sources:
         labels_actor.SetMapper(labels)
         ren.AddActor(labels_actor)
     
-draw_petrie_polygons = False
 if draw_petrie_polygons:
     for ipp,pp in enumerate(petrie_polygons):
         pd = makePolyData( all_verts, [pp] )
@@ -633,7 +635,6 @@ def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
     m.Modified()
     return total_move
         
-relax = True
 if relax:
     N = 400 # frames in the relaxation phase
     M = 150 # frames in the linear phase
@@ -671,6 +672,7 @@ if relax:
         renWin.Render()
         png.SetFileName("test"+str(iFrame).zfill(4)+".png")
         wif.Modified()
-        #png.Write()
+        if save_animated_PNG:
+            png.Write()
 
 iren.Start()
