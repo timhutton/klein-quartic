@@ -178,7 +178,7 @@ if output_SVG:
                     else:
                         f.write('  <line x1="'+str(p1[0])+'" y1="'+str(p1[1])+'" x2="'+str(p2[0])+'" y2="'+str(p2[1])+'" class="edge" />\n')
                         text_loc = add(av(p1,p2),mul(normal,-tab_width/2))
-                    f.write('  <text x="'+str(text_loc[0])+'" y="'+str(text_loc[1])+'" class="label">'+edge_label+'</text>\n')                
+                    f.write('  <text x="'+str(text_loc[0])+'" y="'+str(text_loc[1])+'" class="label">'+edge_label+'</text>\n')
             f.write('  <line x1="920" y1="320" x2="1000" y2="320" class="mountain_fold" />\n')
             f.write('  <text x="1010" y="320" class="label_left">ridge fold</text>\n')
             f.write('  <line x1="920" y1="350" x2="1000" y2="350" class="valley_fold" />\n')
