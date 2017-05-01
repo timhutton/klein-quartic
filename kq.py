@@ -144,16 +144,17 @@ if output_SVG:
            1:'AFD', 19:'AFD',  8:'AF', 3:'ECHGB',  5:'ECHGB', 14:'ECGB',  2:'AFD', 6:'AF', 22:'AF',  9:'ECHGB', 13:'ECGB', 16:'ECGB' }
     for iPage,page in enumerate(pages):
         with open('instructions_page'+str(iPage+1)+'.svg','w') as f:
-            label_color = 'black' if SVG_with_color else 'rgb(200,200,200)'
+            label_color = 'black'
             face_fill = 'rgb('+','.join(str(int(c*255)) for c in type_colors[iPage][:3])+')' if SVG_with_color else 'none'
             f.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
             f.write('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1150" height="813">\n')
             f.write('  <style>\n')
-            f.write('    .label_left { font-family: arial, sans-serif; font-size:18px; fill:'+label_color+'; text-anchor: left; dominant-baseline: central }\n')
+            f.write('    .label_left { font-family: arial, sans-serif; font-size:18px; fill: '+label_color+'; text-anchor: left; dominant-baseline: central }\n')
             f.write('    .label { font-family: arial, sans-serif; font-size:14px; fill:'+label_color+'; text-anchor: middle; dominant-baseline: central }\n')
-            f.write('    .edge { stroke: black; stroke-width: 1; fill:'+face_fill+' }\n')
-            f.write('    .mountain_fold { stroke: '+label_color+'; stroke-width: 1; stroke-dasharray: 2,5,10,5 }\n')
-            f.write('    .valley_fold { stroke: '+label_color+'; stroke-width: 1; stroke-dasharray: 5,5 }\n')
+            f.write('    .face_label { font-family: arial, sans-serif; font-size:18px; fill: '+label_color+'; text-anchor: middle; dominant-baseline: central }\n')
+            f.write('    .edge { stroke: black; stroke-width: 1; fill: '+face_fill+' }\n')
+            f.write('    .mountain_fold { stroke: '+label_color+'; stroke-width: 1; stroke-dasharray: 2,5,10,5; fill: none }\n')
+            f.write('    .valley_fold { stroke: '+label_color+'; stroke-width: 1; stroke-dasharray: 10,10; fill: none }\n')
             f.write('  </style>\n')
             f.write('  <rect x="1" y="1" width="1149" height="812" fill="none" stroke="black" stroke-width="1"/>\n')
             for iiFace,iFace in enumerate(page):
@@ -170,7 +171,8 @@ if output_SVG:
                         +'" class="'+['mountain_fold','valley_fold'][internal_fold_types[this_face_type][iFold]]+'" />\n')
                 text_x = sum(verts[i][0] for i in [0,3,4])/3 
                 text_y = sum(verts[i][1] for i in [0,3,4])/3 
-                f.write('  <text x="'+str(text_x)+'" y="'+str(text_y)+'" class="label">'+str(iFace)+'</text>\n')
+                f.write('  <text x="'+str(text_x)+'" y="'+str(text_y)+'" class="face_label">'+str(iFace)+'</text>\n')
+                f.write('  <line x1="'+str(text_x-10)+'" y1="'+str(text_y+10)+'" x2="'+str(text_x+10)+'" y2="'+str(text_y+10)+'" class="edge" />\n')
                 for iEdge in range(len(verts)):
                     edge_label = edge_labels[this_face_type][iEdge]
                     p1 = verts[iEdge]
@@ -199,6 +201,7 @@ if output_SVG:
             f.write('  <text x="990" y="490" class="label_left">Quartic</text>\n')
             f.write('  <text x="1130" y="450" class="label_left" writing-mode="tb-rl">http://github.com/timhutton/klein-quartic</text>\n')
             f.write('</svg>\n')
+    print 'Wrote SVG files. Can convert to PDF using e.g. inkscape --export-pdf=file.pdf file.svg'
 
 # to check that all the heptagons of each type are congruent:
 #for i,f in enumerate( outer_faces + inner_faces ):
