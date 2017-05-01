@@ -11,7 +11,9 @@ This image shows the 3D embedding of the Klein Quartic together with the corresp
 
 ### Papercraft model ###
 
-Make your own Klein Quartic by following these papercraft instructions: [for black-and-white printers](https://github.com/timhutton/klein-quartic/raw/master/papercraft/instructions.pdf), [for color printers](https://github.com/timhutton/klein-quartic/raw/master/papercraft/instructions_for_color_printer.pdf).
+Make your own Klein Quartic by following these papercraft instructions:
+* [PDF for black-and-white printers](https://github.com/timhutton/klein-quartic/raw/master/papercraft/instructions.pdf)
+* [PDF for color printers](https://github.com/timhutton/klein-quartic/raw/master/papercraft/instructions_for_color_printer.pdf)
 
 ![img_20151223_100454](https://cloud.githubusercontent.com/assets/647092/12025864/f3761b04-adaa-11e5-9a79-daad33d30248.jpg)
 ![img_20151223_100516](https://cloud.githubusercontent.com/assets/647092/12025865/f3963632-adaa-11e5-899b-b826f0c8bebd.jpg)
