@@ -17,6 +17,23 @@
     You should have received a copy of the GNU General Public License
     along with klein-quartic. If not, see <http://www.gnu.org/licenses/>.
 '''
+
+# -------------------------- user options -------------------------
+output_OBJ = False
+output_SVG = False
+SVG_with_color = False
+render_scene = True
+draw_plane = True
+draw_folding = True
+smooth_normals = False
+show_boundary = True
+label_faces = False
+label_points = False
+label_face_ids = False
+draw_petrie_polygons = False
+relax = True
+save_animated_PNG = False
+# -----------------------------------------------------------------
     
 try:
     import vtk
@@ -24,7 +41,7 @@ except ImportError:
     print "\nThis script uses VTK, which you don't seem to have installed.\n"
     print "On Ubuntu: sudo apt-get install python-vtk, and then run with 'python kq.py'\n"
     print "On Windows: download python installer from http://vtk.org, install, add the bin folder to your PATH\n"
-    print "(eg. 'C:\\Program Files\\VTK-6.3.0\\bin') and then run with 'vtkpython kq.py'"
+    print "(eg. 'C:\\Program Files\\VTK 7.1.1\\bin') and then run with 'vtkpython kq.py'"
     exit(1)
     
 import itertools
@@ -66,20 +83,18 @@ inner_faces = [ (4,12,13,14,18,19,20), (4,20,21,22,26,27,28), (4,28,29,30,10,11,
                 (5,9,8,15,42,43,44),   (5,44,45,46,34,35,36), (5,36,37,38,11,10,9), 
                 (6,17,16,23,35,34,33), (6,33,32,39,50,51,52), (6,52,53,54,19,18,17),
                 (7,25,24,31,51,50,49), (7,49,48,55,43,42,41), (7,41,40,47,27,26,25) ]
+
+# for better shape we move the tetrahedron vertices inwards
+corner_verts = [ mul(p,0.6) for p in tet_verts+inner_tet_verts ]
+all_verts = corner_verts + arm_sides 
                 
 def heptagon_as_tris( f ):
     '''Given a heptagon, return the desired triangles.'''
     ind = [ (2,3,1), (1,3,0), (0,3,4), (0,4,6), (6,4,5) ]
     return [ (f[t[0]],f[t[1]],f[t[2]]) for t in ind ]
     
-# for better shape we move the tetrahedron vertices inwards
-corner_verts = [ mul(p,0.6) for p in tet_verts+inner_tet_verts ]
-all_verts = corner_verts + arm_sides 
-
-outputOBJ( all_verts, outer_faces + inner_faces, 'kq.obj' ) # this one is 'correct' but has bent faces which most packages seem to find hard
-
 faces_as_tris = flatten( heptagon_as_tris(f) for f in outer_faces + inner_faces )
-outputOBJ( all_verts, faces_as_tris, 'kq_surface.obj' ) # this one has the wrong topology but is triangulated
+type_colors = [ (1,0.4,0.4,1), (0.4,0.4,1,1), (0.4,1,0.4,1), (1,1,0.4,1), (1,0.4,1,1), (0.4,1,1,1), (1,0.5,0,1), (0.6,0.6,0.6,1) ]
 
 def makeFlatHeptagon( verts, face ): 
     ''' Given a (bent) heptagon that can be triangulated as below, output a z=0 flat version.
@@ -109,17 +124,91 @@ def makeFlatHeptagon( verts, face ):
 # Compute flat versions of the two heptagons, for making the shape out of card.
 # For printing: load both into ParaView, and view in 2D mode, to get at same scale without distortion.
 flat_outer_verts,flat_outer_faces = makeFlatHeptagon( all_verts, outer_faces[0] )
-outputOBJ( flat_outer_verts, flat_outer_faces, 'flat_outer.obj' )
 flat_inner_verts,flat_inner_faces = makeFlatHeptagon( all_verts, inner_faces[0] )
-outputOBJ( flat_inner_verts, flat_inner_faces, 'flat_inner.obj' )
+
+if output_OBJ:
+    outputOBJ( all_verts, outer_faces + inner_faces, 'kq.obj' ) # this one is 'correct' but has bent faces which most packages seem to find hard
+    outputOBJ( all_verts, faces_as_tris, 'kq_surface.obj' ) # this one has the wrong topology but is triangulated
+    outputOBJ( flat_outer_verts, flat_outer_faces, 'flat_outer.obj' )
+    outputOBJ( flat_inner_verts, flat_inner_faces, 'flat_inner.obj' )
+
+if output_SVG:
+    pages = [(0,19,21),(1,20,22),(2,18,23),(3,14,16),(4,12,17),(5,13,15),(6,7,8),(9,10,11)] # which face do we put on each page (to get the right colors)
+    face_type = [1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1] # 0=inner, 1=outer
+    internal_folds = [(1,3),(3,0),(0,4),(4,6)] # indices of heptagon vertices
+    internal_fold_types = [[0,1,1,1],[0,1,0,0]] # 0=mountain, 1=valley; for inner and outer triangles
+    edge_labels=['AFECHGB','AFGCDEB'] # for inner and outer triangles
+    flat_inner_verts = [(y,-x,z) for (x,y,z) in flat_inner_verts]
+    flat_outer_verts = [(0.5-x,-0.05-y,z) for (x,y,z) in flat_outer_verts]
+    tabs={ 0:'AFD', 18:'AFD', 20:'AF', 4:'ECHGB', 11:'ECHGB', 12:'ECGB', 21:'AFD', 7:'AF', 23:'AF', 10:'ECHGB', 15:'ECGB', 17:'ECGB',
+           1:'AFD', 19:'AFD',  8:'AF', 3:'ECHGB',  5:'ECHGB', 14:'ECGB',  2:'AFD', 6:'AF', 22:'AF',  9:'ECHGB', 13:'ECGB', 16:'ECGB' }
+    for iPage,page in enumerate(pages):
+        with open('instructions_page'+str(iPage+1)+'.svg','w') as f:
+            label_color = 'black' if SVG_with_color else 'rgb(200,200,200)'
+            face_fill = 'rgb('+','.join(str(int(c*255)) for c in type_colors[iPage][:3])+')' if SVG_with_color else 'none'
+            f.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
+            f.write('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1150" height="813">\n')
+            f.write('  <style>\n')
+            f.write('    .label_left { font-family: arial, sans-serif; font-size:18px; fill:'+label_color+'; text-anchor: left; dominant-baseline: central }\n')
+            f.write('    .label { font-family: arial, sans-serif; font-size:14px; fill:'+label_color+'; text-anchor: middle; dominant-baseline: central }\n')
+            f.write('    .edge { stroke: black; stroke-width: 1; fill:'+face_fill+' }\n')
+            f.write('    .mountain_fold { stroke: '+label_color+'; stroke-width: 1; stroke-dasharray: 2,5,10,5 }\n')
+            f.write('    .valley_fold { stroke: '+label_color+'; stroke-width: 1; stroke-dasharray: 5,5 }\n')
+            f.write('  </style>\n')
+            f.write('  <rect x="1" y="1" width="1149" height="812" fill="none" stroke="black" stroke-width="1"/>\n')
+            for iiFace,iFace in enumerate(page):
+                x_offset = 130 + 300 * iiFace 
+                y_offset = 30
+                scale = 600
+                this_face_type = face_type[iFace]
+                verts = [ (x*scale+x_offset,y_offset-y*scale) for (x,y,z) in [flat_inner_verts,flat_outer_verts][this_face_type] ]
+                if SVG_with_color:
+                    f.write('  <polygon points="'+' '.join(str(x)+' '+str(y) for (x,y) in verts)+'" stroke="none" fill="'+face_fill+'" />\n')
+                for iFold,fold in enumerate(internal_folds):
+                    p = [verts[fold[0]],verts[fold[1]]]
+                    f.write('  <line x1="'+str(p[0][0])+'" y1="'+str(p[0][1])+'" x2="'+str(p[1][0])+'" y2="'+str(p[1][1])
+                        +'" class="'+['mountain_fold','valley_fold'][internal_fold_types[this_face_type][iFold]]+'" />\n')
+                text_x = sum(verts[i][0] for i in [0,3,4])/3 
+                text_y = sum(verts[i][1] for i in [0,3,4])/3 
+                f.write('  <text x="'+str(text_x)+'" y="'+str(text_y)+'" class="label">'+str(iFace)+'</text>\n')
+                for iEdge in range(len(verts)):
+                    edge_label = edge_labels[this_face_type][iEdge]
+                    p1 = verts[iEdge]
+                    p2 = verts[(iEdge+1)%len(verts)]
+                    normal = norm(rotateXY90acw(sub(p1,p2)))
+                    tangent = norm(sub(p2,p1))
+                    tab_width = 20
+                    if edge_label in tabs[iFace]:
+                        f.write('  <line x1="'+str(p1[0])+'" y1="'+str(p1[1])+'" x2="'+str(p2[0])+'" y2="'+str(p2[1])+'" class="mountain_fold" />\n')
+                        text_loc = add(av(p1,p2),mul(normal,tab_width/2))
+                        t1 = add(add(p1,mul(tangent,tab_width*3)),mul(normal,tab_width))
+                        t2 = add(sub(p2,mul(tangent,tab_width*3)),mul(normal,tab_width))
+                        seq = [p1,t1,t2,p2]
+                        f.write('  <polyline points="'+' '.join(map(str,flatten(seq)))+'" class="edge" />\n')
+                    else:
+                        f.write('  <line x1="'+str(p1[0])+'" y1="'+str(p1[1])+'" x2="'+str(p2[0])+'" y2="'+str(p2[1])+'" class="edge" />\n')
+                        text_loc = add(av(p1,p2),mul(normal,-tab_width/2))
+                    f.write('  <text x="'+str(text_loc[0])+'" y="'+str(text_loc[1])+'" class="label">'+edge_label+'</text>\n')
+            f.write('  <line x1="920" y1="320" x2="1000" y2="320" class="mountain_fold" />\n')
+            f.write('  <text x="1010" y="320" class="label_left">ridge fold</text>\n')
+            f.write('  <line x1="920" y1="350" x2="1000" y2="350" class="valley_fold" />\n')
+            f.write('  <text x="1010" y="350" class="label_left">valley fold</text>\n')
+            f.write('  <text x="15" y="20" class="label_left">Page '+str(iPage+1)+' of '+str(len(pages))+'</text>\n')
+            f.write('  <text x="990" y="450" class="label_left">Papercraft</text>\n')
+            f.write('  <text x="990" y="470" class="label_left">Klein</text>\n')
+            f.write('  <text x="990" y="490" class="label_left">Quartic</text>\n')
+            f.write('  <text x="1130" y="450" class="label_left" writing-mode="tb-rl">http://github.com/timhutton/klein-quartic</text>\n')
+            f.write('</svg>\n')
 
 # to check that all the heptagons of each type are congruent:
 #for i,f in enumerate( outer_faces + inner_faces ):
 #    outputOBJ( *makeFlatHeptagon( all_verts, f ), filename = 'flat_'+str(i)+'.obj' )
 
+if not render_scene:
+    exit()
+
 # ------ visualise with VTK --------
     
-
 print
 print '             Left drag : rotate'
 print '     Shift + Left drag : pan'
@@ -160,7 +249,6 @@ for val in cellIds:
     surfaceCellData.InsertNextValue( val )
 surface.GetCellData().SetScalars( surfaceCellData )
 
-type_colors = [ (1,0.4,0.4,1), (0.4,0.4,1,1), (0.4,1,0.4,1), (1,1,0.4,1), (1,0.4,1,1), (0.4,1,1,1), (1,0.5,0,1), (0.6,0.6,0.6,1) ]
 lut = vtk.vtkLookupTable()
 lut.SetNumberOfTableValues(25)
 lut.Build()
@@ -265,7 +353,6 @@ for i in range( plane.GetNumberOfPolys() ):
     plane_scalars.SetValue( i, plane_ids[ i ] if i in plane_ids else 200+i )
 plane.GetCellData().SetScalars( plane_scalars )
 
-draw_plane = True
 if draw_plane:
     planeMapper = vtk.vtkPolyDataMapper()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
@@ -297,7 +384,8 @@ for iFace in range(plane.GetNumberOfPolys()):
         iv = iverts.GetId(iiv)
         face += [ iv ]
     faces += [ face ]
-outputOBJ( verts, faces, 'plane.obj' )
+if output_OBJ:
+    outputOBJ( verts, faces, 'plane.obj' )
 
 # correspond the vertices
 plane_to_kq = { 0:0,1:8,2:15,3:14,4:18,5:17,6:16,7:9,8:10,9:30,10:31,11:24,12:25,13:26,
@@ -312,7 +400,6 @@ plane_to_kq = { 0:0,1:8,2:15,3:14,4:18,5:17,6:16,7:9,8:10,9:30,10:31,11:24,12:25
                 126:39,127:32,128:1,129:13,130:38,134:27,135:47,136:46,137:45,142:46,143:34,144:33,
                 163:49,164:50,165:39,201:55,202:43,203:44 }
 
-draw_folding = True
 folding = vtk.vtkPolyData()
 folding_on_surface = vtk.vtkPolyData()
 folding_on_plane = vtk.vtkPolyData()
@@ -366,10 +453,15 @@ if draw_folding:
     foldingMapper = vtk.vtkPolyDataMapper()
     if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
         foldingNormals.SetInputData( folding )
+        if not smooth_normals:
+            foldingMapper.SetInputData( folding )
     else:
         foldingNormals.SetInput( folding )
+        if not smooth_normals:
+            foldingMapper.SetInput( folding )
     foldingNormals.SplittingOff()
-    foldingMapper.SetInputConnection( foldingNormals.GetOutputPort() )
+    if smooth_normals:
+        foldingMapper.SetInputConnection( foldingNormals.GetOutputPort() )
     foldingMapper.SetScalarRange(0,24)
     foldingMapper.SetLookupTable(lut)
     foldingMapper.SetScalarModeToUseCellData()
@@ -393,7 +485,6 @@ for iEdge in range( boundary_extractor.GetOutput().GetNumberOfCells() ):
     boundary_scalars.InsertNextValue( iEdge )
 boundary_extractor.GetOutput().GetCellData().SetScalars( boundary_scalars )
 
-show_boundary = True
 boundary = vtk.vtkPolyData()
 if show_boundary:
     boundary_tube = vtk.vtkTubeFilter()
@@ -410,9 +501,6 @@ if show_boundary:
     boundary_tubeActor.GetProperty().SetColor(0,0,0)
     ren.AddActor( boundary_tubeActor )
 
-label_faces = False
-label_points = False
-label_face_ids = False
 sources = [ ]
 if draw_folding: sources.append( folding )
 if draw_plane: sources.append( plane )
@@ -471,7 +559,6 @@ for source in sources:
         labels_actor.SetMapper(labels)
         ren.AddActor(labels_actor)
     
-draw_petrie_polygons = False
 if draw_petrie_polygons:
     for ipp,pp in enumerate(petrie_polygons):
         pd = makePolyData( all_verts, [pp] )
@@ -548,7 +635,6 @@ def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
     m.Modified()
     return total_move
         
-relax = True
 if relax:
     N = 400 # frames in the relaxation phase
     M = 150 # frames in the linear phase
@@ -586,6 +672,7 @@ if relax:
         renWin.Render()
         png.SetFileName("test"+str(iFrame).zfill(4)+".png")
         wif.Modified()
-        #png.Write()
+        if save_animated_PNG:
+            png.Write()
 
 iren.Start()
