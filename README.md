@@ -1,4 +1,4 @@
-Exploring the Klein Quartic's geometry.
+ Exploring the Klein Quartic's geometry.
 
 To run: 
 
@@ -11,12 +11,7 @@ This image shows the 3D embedding of the Klein Quartic together with the corresp
 
 ### Papercraft model ###
 
-Make your own Klein Quartic by following these papercraft instructions.
-(EDIT (Niles): Clarifications and an 8-fold coloring version are now in the `papercraft`
-subdirectory.)
-
-[![papercraft-overview](https://cloud.githubusercontent.com/assets/647092/12025772/eda778ae-ada9-11e5-96dc-7a423e48a899.png)  (PDF, 3.3MB)](https://github.com/timhutton/klein-quartic/releases/download/0.1/KleinQuartic-papercraft-instructions_all.pdf)
-
+Make your own Klein Quartic by following these papercraft instructions: [for black-and-white printers](https://github.com/timhutton/klein-quartic/raw/master/papercraft/instructions.pdf), [for color printers](https://github.com/timhutton/klein-quartic/raw/master/papercraft/instructions_for_color_printer.pdf).
 
 ![img_20151223_100454](https://cloud.githubusercontent.com/assets/647092/12025864/f3761b04-adaa-11e5-9a79-daad33d30248.jpg)
 ![img_20151223_100516](https://cloud.githubusercontent.com/assets/647092/12025865/f3963632-adaa-11e5-899b-b826f0c8bebd.jpg)
