@@ -207,7 +207,7 @@ if output_SVG:
             f.write('</svg>\n')
         print 'inkscape --export-pdf='+output_file_title+'.pdf '+output_file_title+'.svg'
     print 'To convert papercraft/readme.md to PDF, try: http://www.markdowntopdf.com/'
-    print 'To merge PDF pages into one PDF, try: http://www.mergepdf.net/'
+    print 'To merge PDF pages into one PDF, try: https://smallpdf.com/merge-pdf'
 
 # to check that all the heptagons of each type are congruent:
 #for i,f in enumerate( outer_faces + inner_faces ):
