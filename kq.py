@@ -136,12 +136,14 @@ if output_SVG:
     pages = [(0,19,21),(1,20,22),(2,18,23),(3,14,16),(4,12,17),(5,13,15),(6,7,8),(9,10,11)] # which face do we put on each page (to get the right colors)
     face_type = [1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1] # 0=inner, 1=outer
     internal_folds = [(1,3),(3,0),(0,4),(4,6)] # indices of heptagon vertices
+    fold_types=['mountain_fold','valley_fold'] # 0,1
     internal_fold_types = [[0,1,1,1],[0,1,0,0]] # 0=mountain, 1=valley; for inner and outer triangles
     edge_labels=['AFECHGB','AFGCDEB'] # for inner and outer triangles
     flat_inner_verts = [(y,-x,z) for (x,y,z) in flat_inner_verts]
     flat_outer_verts = [(0.5-x,-0.05-y,z) for (x,y,z) in flat_outer_verts]
     tabs={ 0:'AFD', 18:'AFD', 20:'AF', 4:'ECHGB', 11:'ECHGB', 12:'ECGB', 21:'AFD', 7:'AF', 23:'AF', 10:'ECHGB', 15:'ECGB', 17:'ECGB',
            1:'AFD', 19:'AFD',  8:'AF', 3:'ECHGB',  5:'ECHGB', 14:'ECGB',  2:'AFD', 6:'AF', 22:'AF',  9:'ECHGB', 13:'ECGB', 16:'ECGB' }
+    tab_fold_types={ 'A':0, 'B':0, 'C':0, 'D':0, 'E':0, 'F':1, 'G':0, 'H':0 } # 0=mountain, 1=valley
     print 'To convert to PDF, I suggest using Inkscape:'
     for iPage,page in enumerate(pages):
         output_file_title = 'instructions_page'+str(iPage+1)
@@ -170,7 +172,7 @@ if output_SVG:
                 for iFold,fold in enumerate(internal_folds):
                     p = [verts[fold[0]],verts[fold[1]]]
                     f.write('  <line x1="'+str(p[0][0])+'" y1="'+str(p[0][1])+'" x2="'+str(p[1][0])+'" y2="'+str(p[1][1])
-                        +'" class="'+['mountain_fold','valley_fold'][internal_fold_types[this_face_type][iFold]]+'" />\n')
+                        +'" class="'+fold_types[internal_fold_types[this_face_type][iFold]]+'" />\n')
                 text_x = sum(verts[i][0] for i in [0,3,4])/3 
                 text_y = sum(verts[i][1] for i in [0,3,4])/3 
                 f.write('  <text x="'+str(text_x)+'" y="'+str(text_y)+'" class="face_label">'+str(iFace)+'</text>\n')
@@ -183,7 +185,7 @@ if output_SVG:
                     tangent = norm(sub(p2,p1))
                     tab_width = 20
                     if edge_label in tabs[iFace]:
-                        f.write('  <line x1="'+str(p1[0])+'" y1="'+str(p1[1])+'" x2="'+str(p2[0])+'" y2="'+str(p2[1])+'" class="mountain_fold" />\n')
+                        f.write('  <line x1="'+str(p1[0])+'" y1="'+str(p1[1])+'" x2="'+str(p2[0])+'" y2="'+str(p2[1])+'" class="'+fold_types[tab_fold_types[edge_label]]+'" />\n')
                         text_loc = add(av(p1,p2),mul(normal,tab_width/2))
                         t1 = add(add(p1,mul(tangent,tab_width*3)),mul(normal,tab_width))
                         t2 = add(sub(p2,mul(tangent,tab_width*3)),mul(normal,tab_width))
