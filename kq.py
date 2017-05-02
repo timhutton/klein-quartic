@@ -142,8 +142,10 @@ if output_SVG:
     flat_outer_verts = [(0.5-x,-0.05-y,z) for (x,y,z) in flat_outer_verts]
     tabs={ 0:'AFD', 18:'AFD', 20:'AF', 4:'ECHGB', 11:'ECHGB', 12:'ECGB', 21:'AFD', 7:'AF', 23:'AF', 10:'ECHGB', 15:'ECGB', 17:'ECGB',
            1:'AFD', 19:'AFD',  8:'AF', 3:'ECHGB',  5:'ECHGB', 14:'ECGB',  2:'AFD', 6:'AF', 22:'AF',  9:'ECHGB', 13:'ECGB', 16:'ECGB' }
+    print 'To convert to PDF, I suggest using Inkscape:'
     for iPage,page in enumerate(pages):
-        with open('instructions_page'+str(iPage+1)+'.svg','w') as f:
+        output_file_title = 'instructions_page'+str(iPage+1)
+        with open(output_file_title+'.svg','w') as f:
             label_color = 'black'
             face_fill = 'rgb('+','.join(str(int(c*255)) for c in type_colors[iPage][:3])+')' if SVG_with_color else 'none'
             f.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
@@ -201,7 +203,7 @@ if output_SVG:
             f.write('  <text x="990" y="490" class="label_left">Quartic</text>\n')
             f.write('  <text x="1130" y="450" class="label_left" writing-mode="tb-rl">http://github.com/timhutton/klein-quartic</text>\n')
             f.write('</svg>\n')
-    print 'Wrote SVG files. Can convert to PDF using e.g. inkscape --export-pdf=file.pdf file.svg'
+        print 'inkscape --export-pdf='+output_file_title+'.pdf '+output_file_title+'.svg'
 
 # to check that all the heptagons of each type are congruent:
 #for i,f in enumerate( outer_faces + inner_faces ):
