@@ -1,4 +1,3 @@
-flat_inner.obj
-flat_outer.obj
-plane.obj
-
+*.obj
+*.pyc
+*.svg
