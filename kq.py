@@ -206,6 +206,8 @@ if output_SVG:
             f.write('  <text x="1130" y="450" class="label_left" writing-mode="tb-rl">http://github.com/timhutton/klein-quartic</text>\n')
             f.write('</svg>\n')
         print 'inkscape --export-pdf='+output_file_title+'.pdf '+output_file_title+'.svg'
+    print 'To convert papercraft/readme.md to PDF, try: http://www.markdowntopdf.com/'
+    print 'To merge PDF pages into one PDF, try: http://www.mergepdf.net/'
 
 # to check that all the heptagons of each type are congruent:
 #for i,f in enumerate( outer_faces + inner_faces ):
