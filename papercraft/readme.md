@@ -1,11 +1,10 @@
-Klein Quartic
-=============
+Papercraft Klein Quartic
+========================
 
 Notes
 -----
 
-Print the eight pages on card. For best results, use eight different
-colors if possible. 
+Print the eight pages on card. For best results, use a different color for each page.
 
 Cut out the 24 pieces. 
 
@@ -14,7 +13,12 @@ heptagon. All pieces of the same shape are folded the same way. Ridge folds
 are ones that fold away from the printed side. Valley folds fold towards the printed side.
 
 To explore the 3D shape you are making, visit:
-        https://github.com/timhutton/klein-quartic
+
+`https://github.com/timhutton/klein-quartic`
+
+and run:
+
+`python kq.py`
 
         
 Instructions
