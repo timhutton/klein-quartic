@@ -1,4 +1,4 @@
-<Exploring the Klein Quartic's geometry.
+Exploring the Klein Quartic's geometry.
 
 To run: 
 
