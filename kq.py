@@ -31,8 +31,9 @@ label_faces = False
 label_points = False
 label_face_ids = False
 draw_petrie_polygons = False
-relax = True
+animate = False
 save_animated_PNG = False
+hyperbolic_plane_rings = 9
 # -----------------------------------------------------------------
     
 try:
@@ -337,7 +338,7 @@ if draw_edges:
     tubeActor.GetProperty().SetColor(0,0,0)
     ren.AddActor(tubeActor)
 
-plane = getDual( getHyperbolicPlaneTiling( 3, 7, 8 ) ) # (we do it this way to get a vertex at the center instead of a cell)
+plane = getDual( getHyperbolicPlaneTiling( 3, 7, hyperbolic_plane_rings ) ) # (we do it this way to get a vertex at the center instead of a cell)
 #plane = getHyperbolicPlaneTiling( 3, 7, 7 )
 #plane = getDual( getHyperbolicPlaneTiling( 3, 7, 7 ) )
 #plane = getDual( getHyperbolicPlaneTiling( 3, 7, 12 ) ) # (we do it this way to get a vertex at the center instead of a cell)
@@ -446,7 +447,7 @@ if draw_folding:
             iPlanePt = plane.GetCell( iPlanePoly ).GetPointId( iiPlanePoint )
             cells.InsertCellPoint( plane_to_folding[ iPlanePt ] )
         foldingScalars.InsertNextValue( plane_ids[ iPlanePoly ] )
-    folding.SetPoints( pts )
+    folding.SetPoints( folding_pts_on_surface )
     folding.SetPolys( cells )
     folding_on_plane.SetPoints( folding_pts_on_plane )
     folding_on_surface.SetPoints( folding_pts_on_surface )
@@ -644,7 +645,7 @@ def relaxUniformMesh( m, rest_length, max_speed, velocity, connections ):
     m.Modified()
     return total_move
         
-if relax:
+if animate:
     N = 400 # frames in the relaxation phase
     M = 150 # frames in the linear phase
     animation = [ vtk.vtkPoints() for i in range(M+N) ]
