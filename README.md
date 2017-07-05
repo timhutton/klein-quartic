@@ -7,7 +7,7 @@ To run:
 Video: https://youtu.be/noLJ_ktAxQE
 
 This image shows the 3D embedding of the Klein Quartic together with the corresponding fundamental region of the {7,3} tiling:
-![kq_on_fundamental_73](https://cloud.githubusercontent.com/assets/647092/11603274/88411e40-9ad8-11e5-9509-92f51272621f.png)
+![rendering](https://user-images.githubusercontent.com/647092/27866719-4ea1f6ee-618f-11e7-906b-e931df1f17e9.png)
 
 ### Papercraft model ###
 
